@@ -1,0 +1,90 @@
+Program        = { Decl };
+
+Decl           = ObjDecl | FnDecl | VarDecl | Stmt;
+
+ObjDecl        = "object", ID, [ ObjDeclExtends ], Block;
+ObjDeclExtends = "extends", ID;
+
+FnDecl         = "fn", ID, "(", { FnParam }, ")", Block;
+FnParam         = ID, [ "," ];
+
+VarDecl        = "let", ID, [ VarDeclInit ], ";";
+VarDeclInit    = "=", Expr;
+
+Stmt           = ExprStmt | ForStmt | IfStmt | PrintStmt | ReturnStmt | WhileStmt | Block;
+
+ExprStmt       = Expr, ";";
+
+ForStmt        = "for", "(", [ ForInit ], ";", [ ForCond ], ";", [ ForIncr ], ")", Stmt;
+ForInit        = VarDecl | ExprStmt;
+ForCond        = Expr;
+ForIncr        = Expr;
+
+IfStmt         = "if", "(", IfCond, ")", Stmt, [ IfElseBranch ];
+IfCond         = Expr;
+IfMainBranch   = Stmt;
+IfElseBranch   = "else", Stmt;
+
+PrintStmt      = "print", "(", Expr, ")", ";";
+ReturnStmt     = "return", [ Expr ], ";";
+WhileStmt      = "while", "(", Expr, ")", Stmt;
+Block          = "{", { Decl }, "}";
+
+Expr           = Assign;
+
+Assign         = AssignExpr | LogicOr;
+AssignExpr     = AssignTarget, "=", Assign;
+AssignTarget   = AssignTargetProperty | AssignTargetVar;
+AssignTargetVar = ID;
+AssignTargetProperty = Call, ".", ID;
+
+LogicOr        = LogicAnd, { LogicOrSuffix };
+LogicOrSuffix  = "or", LogicAnd;
+
+LogicAnd       = Equality, { LogicAndSuffix };
+LogicAndSuffix = "and", Equality;
+
+Equality       = Comparison, { EqualitySuffix };
+EqualitySuffix = EqualityOp, Comparison;
+EqualityOp     = "!=" | "==";
+
+Comparison     = Term, { ComparisonSuffix };
+ComparisonSuffix = ComparisonOp, Term;
+ComparisonOp   = ">" | ">=" | "<" | "<=";
+
+Term           = Factor, { TermSuffix };
+TermSuffix     = TermOp, Factor;
+TermOp         = "-" | "+";
+
+Factor         = Unary, { FactorSuffix };
+FactorSuffix   = FactorOp, Unary;
+FactorOp       = "/" | "*";
+
+Unary          = UnaryExpr | Call;
+UnaryExpr      = UnaryOp, Unary;
+UnaryOp        = "!" | "-";
+
+Call          = Primary, { CallSuffix };
+CallSuffix    = CallFn | CallProperty;
+CallFn         = "(", { FnArg }, ")";
+CallProperty  = ".", ID;
+FnArg          = Expr, [ "," ];
+
+Primary        = "true"
+               | "false"
+               | "nil"
+               | "this"
+               | NUMBER
+               | STRING
+               | ID
+               | GroupExpr
+               | ProtoAccess;
+
+GroupExpr     = "(", Expr, ")";
+ProtoAccess    = "proto", ".", ID;
+
+ALPHA          = "A" .. "Z" | "a" .. "z" | "_";
+DIGIT          = "0" .. "9";
+NUMBER         = DIGIT, { DIGIT }, [ ".", DIGIT, { DIGIT } ];
+STRING         = '"', { ALPHA | DIGIT }, '"';
+ID             = ALPHA, { ALPHA | DIGIT };
