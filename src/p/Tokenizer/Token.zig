@@ -4,16 +4,16 @@ const fmt = std.fmt;
 const mem = std.mem;
 
 const util = @import("util");
-const term = util.term;
+const color = util.color;
 
 const Token = @This();
 tag: Tag,
 span: Span = .{},
 value: []const u8,
 
-// [start, end)
+// [begin, end)
 pub const Span = struct {
-    start: usize = 0,
+    begin: usize = 0,
     end: usize = 0,
 };
 
@@ -22,10 +22,10 @@ pub const Location = struct {
     column: usize,
 
     pub fn fromSourceSpan(src: []const u8, span: Span) @This() {
-        const line = mem.count(u8, src[0..span.start], '\n') + 1;
-        const last_newline_idx = mem.findLast(u8, src[0..span.start], '\n');
+        const line = mem.count(u8, src[0..span.begin], '\n') + 1;
+        const last_newline_idx = mem.findLast(u8, src[0..span.begin], '\n');
         const line_start_pos = if (last_newline_idx) |idx| idx + 1 else 0;
-        const column = (span.start - line_start_pos) + 1;
+        const column = (span.begin - line_start_pos) + 1;
 
         return .{ .line = line, .column = column };
     }
@@ -85,39 +85,39 @@ const Format = struct {
 
     pub fn format(this: @This(), writer: *Io.Writer) Io.Writer.Error!void {
         const depth = this.depth;
-        for (0..depth) |_| try writer.print(term.SEP, .{});
+        for (0..depth) |_| try writer.print(color.SEP, .{});
 
         switch (this.token.tag) {
             .number,
             .string,
             => try writer.print("{s}Token{{.{t} = {s}{s}{s}}}{s}\n", .{
-                term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
+                color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
                 this.token.tag,
-                term.FG.WHITE ++ term.FG.EFFECT.UNDERLINE,
+                color.FG.WHITE ++ color.FG.EFFECT.UNDERLINE,
                 this.token.value,
-                term.FG.MAGENTA ++ term.FG.EFFECT.RESET.UNDERLINE,
-                term.RESET,
+                color.FG.MAGENTA ++ color.FG.EFFECT.RESET.UNDERLINE,
+                color.RESET,
             }),
             .identifier => try writer.print("{s}Token{{.{t} = {s}{s}{s}}}{s}\n", .{
-                term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
+                color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
                 this.token.tag,
-                term.FG.WHITE ++ term.FG.EFFECT.UNDERLINE,
+                color.FG.WHITE ++ color.FG.EFFECT.UNDERLINE,
                 this.token.value,
-                term.RESET ++ term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
-                term.RESET,
+                color.RESET ++ color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
+                color.RESET,
             }),
             .comment => try writer.print("{s}Token{{.{t} = {s}{s}{s}}}{s}\n", .{
-                term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
+                color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
                 this.token.tag,
-                term.FG.GREEN ++ term.FG.EFFECT.UNDERLINE,
+                color.FG.GREEN ++ color.FG.EFFECT.UNDERLINE,
                 this.token.value,
-                term.RESET ++ term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
-                term.RESET,
+                color.RESET ++ color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
+                color.RESET,
             }),
             else => try writer.print("{s}Token.{t}{s}\n", .{
-                term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
+                color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
                 this.token.tag,
-                term.RESET,
+                color.RESET,
             }),
         }
     }

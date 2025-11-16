@@ -23,7 +23,7 @@ pub const Primary = union(enum) {
     proto_access: PrimaryProtoAccess,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
+        return switch ((parser.tokens.peek() orelse return null).tag) {
             .true => .{ .true = parser.tokens.next().? },
             .false => .{ .false = parser.tokens.next().? },
             .nil => .{ .nil = parser.tokens.next().? },

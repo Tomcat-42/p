@@ -11,7 +11,7 @@ const p = @import("p");
 const Tokenizer = p.Tokenizer;
 const Token = Tokenizer.Token;
 const util = @import("util");
-const term = util.term;
+const color = util.color;
 
 pub const Assign = @import("Parser/Assign.zig").Assign;
 pub const Expr = Assign;
@@ -312,7 +312,7 @@ pub inline fn expectOrHandleErrorAndSync(this: *@This(), allocator: Allocator, c
     return this.tokens.sync(expected);
 }
 
-fn MakeFormat(T: type) type {
+pub fn MakeFormat(T: type) type {
     return struct {
         depth: usize = 0,
         data: *const T,
@@ -320,8 +320,8 @@ fn MakeFormat(T: type) type {
         pub fn format(this: @This(), writer: *Io.Writer) Io.Writer.Error!void {
             const depth = this.depth;
 
-            for (0..depth) |_| try writer.print(term.SEP, .{});
-            try writer.print("{s}{s}{s}\n", .{ term.FG.BLUE, @typeName(T), term.RESET });
+            for (0..depth) |_| try writer.print(color.SEP, .{});
+            try writer.print("{s}{s}{s}\n", .{ color.FG.BLUE, @typeName(T), color.RESET });
 
             switch (@typeInfo(T)) {
                 .@"struct" => |s| inline for (s.fields) |field| switch (@typeInfo(field.type)) {
@@ -331,10 +331,16 @@ fn MakeFormat(T: type) type {
                     },
                     .optional => if (@field(this.data, field.name)) |f|
                         try writer.print("{f}", f.format(depth + 1)),
-                    else => try writer.print("{f}", @field(this.data, field.name).format(depth + 1)),
+                    else => if (comptime mem.find(u8, @typeName(field.type), "Box")) |_|
+                        try writer.print("{f}", @field(@field(this.data, field.name), "value").format(depth + 1))
+                    else
+                        try writer.print("{f}", @field(this.data, field.name).format(depth + 1)),
                 },
                 .@"union" => |_| switch (this.data.*) {
-                    inline else => |f| try writer.print("{f}", f.format(depth + 1)),
+                    inline else => |f| if (comptime mem.find(u8, @typeName(@TypeOf(f)), "Box")) |_|
+                        try writer.print("{f}", @field(f, "value").format(depth + 1))
+                    else
+                        try writer.print("{f}", f.format(depth + 1)),
                 },
                 else => @compileError("MakeFormat only supports structs and tagged unions"),
             }

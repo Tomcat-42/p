@@ -14,12 +14,12 @@ const Token = p.Tokenizer.Token;
 expr: Expr,
 @")": Token,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
     const expr = try Expr.parse(parser, allocator) orelse return null;
     const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
 
-    return .{ .@"(" = @"(", .expr = &expr, .@")" = @")" };
+    return .{ .@"(" = @"(", .expr = expr, .@")" = @")" };
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitGroupExpr)).@"fn".return_type.? {

@@ -24,6 +24,7 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
 }
 
 pub fn deinit(this: *@This(), allocator: Allocator) void {
+    for(this.decls) |decl| decl.deinit(allocator, decl);
     allocator.free(this.decls);
 }
 

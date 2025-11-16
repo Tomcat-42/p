@@ -18,7 +18,7 @@ init: ?VarDeclInit,
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const let = try parser.expectOrHandleErrorAndSync(allocator, .{.let}) orelse return null;
     const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-    const initv: ?VarDeclInit = switch (try parser.tokens.peek() orelse return null) {
+    const initv: ?VarDeclInit = switch ((parser.tokens.peek() orelse return null).tag) {
         .@"=" => try VarDeclInit.parse(parser, allocator) orelse return null,
         else => null,
     };

@@ -14,7 +14,7 @@ const Token = p.Tokenizer.Token;
 equality: Equality,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const @"and" = parser.expectOrHandleErrorAndSync(allocator, .{.@"and"});
+    const @"and" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"and"}) orelse return null;
     const equality = try Equality.parse(parser, allocator) orelse return null;
 
     return .{ .@"and" = @"and", .equality = equality };

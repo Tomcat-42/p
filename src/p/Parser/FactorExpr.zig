@@ -3,18 +3,18 @@ const fmt = std.fmt;
 const mem = std.mem;
 const Allocator = mem.Allocator;
 
-const P = @import("../Parser.zig");
-const Parser = P.Parser;
-const FactorOp = P.FactorOp;
-const Unary = P.Unary;
-const Visitor = P.Visitor;
-const MakeFormat = P.MakeFormat;
+const p= @import("p");
+const Parser = p.Parser;
+const Unary = Parser.Unary;
+const Visitor = Parser.Visitor;
+const MakeFormat = Parser.MakeFormat;
+const Token = p.Tokenizer.Token;
 
-op: FactorOp,
+op: Token,
 unary: Unary,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const op = try FactorOp.parse(parser, allocator) orelse return null;
+    const op = try parser.expectOrHandleErrorAndSync(allocator, .{.@"*", .@"/"}) orelse return null;
     const unary = try Unary.parse(parser, allocator) orelse return null;
 
     return .{ .op = op, .unary = unary };

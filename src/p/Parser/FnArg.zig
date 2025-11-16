@@ -13,7 +13,7 @@ const Token = p.Tokenizer.Token;
 expr: Expr,
 @",": ?Token,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     const expr = try Expr.parse(parser, allocator) orelse return null;
     const @"," = parser.tokens.expect(.{.@","});
 

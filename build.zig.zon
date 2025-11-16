@@ -4,17 +4,13 @@
     .fingerprint = 0x23765309cc5c6a2, // Changing this has security and trust implications.
     .minimum_zig_version = "0.16.0-dev.932+6568f0f75",
     .dependencies = .{
-        .util = .{
-            .url = "git+https://github.com/Tomcat-42/util#34d01410f424485f80ce59a3734e964a3d9cceaa",
-            .hash = "util-0.1.0-icrIBdVzAACAChyzwiyKviFpoB3B6fuaBrm9rINCntGI",
-        },
+        .util = .{ .path = "../../util" },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src",
-        // For example...
-        //"LICENSE",
-        //"README.md",
+        "LICENSE",
+        "README.md",
     },
 }

@@ -5,16 +5,16 @@ const Allocator = mem.Allocator;
 
 const p = @import("p");
 const Parser = p.Parser;
-const EqualityOp = Parser.EqualityOp;
 const Comparison = Parser.Comparison;
 const Visitor = Parser.Visitor;
 const MakeFormat = Parser.MakeFormat;
+const Token = p.Tokenizer.Token;
 
-op: EqualityOp,
+op: Token,
 comparison: Comparison,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const op = try EqualityOp.parse(parser, allocator) orelse return null;
+    const op = try parser.expectOrHandleErrorAndSync(allocator, .{.@"==", .@"!="}) orelse return null;
     const comparison = try Comparison.parse(parser, allocator) orelse return null;
 
     return .{ .op = op, .comparison = comparison };

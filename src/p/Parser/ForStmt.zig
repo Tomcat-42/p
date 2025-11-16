@@ -23,7 +23,7 @@ inc: ?ForInc,
 @")": Token,
 body: Block,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     const @"for" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"for"}) orelse return null;
     const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
 

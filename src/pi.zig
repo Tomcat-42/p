@@ -13,20 +13,20 @@ const p = @import("p");
 const Tokenizer = p.Tokenizer;
 const Parser = p.Parser;
 const util = @import("util");
-const term = util.term;
+const color = util.color;
 const getopt = util.getopt;
 const err = util.err;
 
 const Repl = struct {
-    prompt: []const u8 = term.FG.GREEN ++ "p> " ++ term.RESET,
+    prompt: []const u8 = color.FG.GREEN ++ "p> " ++ color.RESET,
 
     fn reportErrors(_: *const @This(), errors: []const Parser.Error) !void {
         for (errors) |e| try stderr.print("{d}:{d} Error: {s}{s}{s}\n", .{
             e.span.begin,
             e.span.end,
-            term.FG.RED,
+            color.FG.RED,
             e.message,
-            term.RESET,
+            color.RESET,
         });
     }
 

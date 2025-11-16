@@ -19,7 +19,7 @@ cond: IfCond,
 main_branch: IfMainBranch,
 else_branch: ?IfElseBranch,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     const @"if" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"if"}) orelse return null;
     const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
     const cond = try IfCond.parse(parser, allocator) orelse return null;

@@ -17,7 +17,7 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const @"=" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"="}) orelse return null;
     const expr = try Expr.parse(parser, allocator) orelse return null;
 
-    return .{ .@"=" = @"=", .expr = &expr };
+    return .{ .@"=" = @"=", .expr = expr };
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitVarDeclInit)).@"fn".return_type.? {

@@ -9,19 +9,21 @@ const UnaryExpr = Parser.UnaryExpr;
 const Call = Parser.Call;
 const Visitor = Parser.Visitor;
 const MakeFormat = Parser.MakeFormat;
+const util = @import("util");
+const Box = util.Box;
 
 pub const Unary = union(enum) {
-    unary_expr: *const UnaryExpr,
+    unary_expr: Box(UnaryExpr),
     call: Call,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .@"-", .@"!" => .{ .unary_expr = try allocator.dupe(UnaryExpr, try UnaryExpr.parse(parser, allocator) orelse return null) },
+        return switch ((parser.tokens.peek() orelse return null).tag) {
+            .@"-", .@"!" => .{ .unary_expr = try .init(allocator,try UnaryExpr.parse(parser, allocator) orelse return null) },
             else => .{ .call = try Call.parse(parser, allocator) orelse return null },
         };
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitUnary)).@"fn".return_type.?  {
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitUnary)).@"fn".return_type.? {
         return visitor.visitUnary(this);
     }
 

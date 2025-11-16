@@ -9,17 +9,19 @@ const AssignExpr = Parser.AssignExpr;
 const LogicOr = Parser.LogicOr;
 const Visitor = Parser.Visitor;
 const MakeFormat = Parser.MakeFormat;
+const util = @import("util");
+const Box = util.Box;
 
 pub const Assign = union(enum) {
-    assign_expr: *const AssignExpr,
-    logic_or: *const LogicOr,
+    assign_expr: Box(AssignExpr),
+    logic_or: Box(LogicOr),
 
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
         if (try AssignExpr.parse(parser, allocator)) |expr|
-            return .{ .assign_expr = try allocator.dupe(@This(), expr) };
+            return .{ .assign_expr = try .init(allocator, expr) };
 
         const logic_or = try LogicOr.parse(parser, allocator) orelse return null;
-        return .{ .logic_or = try allocator.dupe(LogicOr, &logic_or) };
+        return .{ .logic_or = try .init(allocator, logic_or) };
     }
 
     pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitAssign)).@"fn".return_type.? {

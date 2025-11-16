@@ -18,7 +18,7 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const op = try parser.expectOrHandleErrorAndSync(allocator, .{ .@"-", .@"!" }) orelse return null;
     const call = try Call.parse(parser, allocator) orelse return null;
 
-    return .{ .op = op, .call = call };
+    return .{ .op = op, .call = .{ .call = call } };
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitUnaryExpr)).@"fn".return_type.? {

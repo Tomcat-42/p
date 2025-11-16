@@ -97,7 +97,7 @@ fn token(this: *const @This(), comptime tag: Token.Tag) Token {
         .tag = tag,
         .value = this.src[this.pos .. this.pos + size],
         .span = .{
-            .start = this.pos,
+            .begin = this.pos,
             .end = this.pos + size,
         },
     };
@@ -126,7 +126,7 @@ fn number(this: *@This()) Token {
     return .{
         .tag = .number,
         .value = this.src[this.pos..idx],
-        .span = .{ .start = this.pos, .end = idx },
+        .span = .{ .begin = this.pos, .end = idx },
     };
 }
 
@@ -139,7 +139,7 @@ fn string(this: *@This()) ?Token {
         return .{
             .tag = .string,
             .value = this.src[begin .. end + 1],
-            .span = .{ .start = begin, .end = end + 1 },
+            .span = .{ .begin = begin, .end = end + 1 },
         };
     };
 
@@ -157,7 +157,7 @@ fn keywordOrIdentifier(this: *@This()) Token {
     return .{
         .value = this.src[this.pos..idx],
         .tag = if (KEYWORDS.get(this.src[this.pos..idx])) |kw| kw else .identifier,
-        .span = .{ .start = this.pos, .end = idx },
+        .span = .{ .begin = this.pos, .end = idx },
     };
 }
 
@@ -176,7 +176,7 @@ fn commentSingle(this: *@This()) ?Token {
     return .{
         .tag = .comment,
         .value = this.src[begin..end],
-        .span = .{ .start = begin, .end = end },
+        .span = .{ .begin = begin, .end = end },
     };
 }
 
@@ -191,7 +191,7 @@ fn commentMulti(this: *@This()) ?Token {
 
         return .{
             .tag = .comment,
-            .span = .{ .start = begin, .end = end },
+            .span = .{ .begin = begin, .end = end },
             .value = this.src[begin..end],
         };
     };

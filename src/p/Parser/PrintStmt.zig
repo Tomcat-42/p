@@ -26,7 +26,7 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     return .{
         .print = print,
         .@"(" = @"(",
-        .expr = &expr,
+        .expr = expr,
         .@")" = @")",
         .@";" = @";",
     };

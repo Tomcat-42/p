@@ -20,7 +20,7 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const @"=" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"="}) orelse return null;
     const value = try Assign.parse(parser, allocator) orelse return null;
 
-    return .{ .target = target, .op = @"=", .value = value };
+    return .{ .target = target, .@"=" = @"=", .value = value };
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitAssign)).@"fn".return_type.? {

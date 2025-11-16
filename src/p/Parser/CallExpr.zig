@@ -15,7 +15,7 @@ pub const CallExpr = union(enum) {
     call_property: CallProperty,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
+        return switch ((parser.tokens.peek() orelse return null).tag) {
             .@"(" => .{ .call_fn = try CallFn.parse(parser, allocator) orelse return null },
             .@"." => .{ .call_property = try CallProperty.parse(parser, allocator) orelse return null },
             else => return null,

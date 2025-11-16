@@ -17,7 +17,7 @@ cond: Expr,
 @")": Token,
 body: Block,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     const @"while" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"while"}) orelse return null;
     const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
     const cond = try Expr.parse(parser, allocator) orelse return null;
@@ -27,7 +27,7 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     return .{
         .@"while" = @"while",
         .@"(" = @"(",
-        .cond = &cond,
+        .cond = cond,
         .@")" = @")",
         .body = body,
     };

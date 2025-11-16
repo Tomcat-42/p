@@ -15,7 +15,7 @@ pub const ForInit = union(enum) {
     expr: Expr,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
+        return switch ((parser.tokens.peek() orelse return null).tag) {
             .let => .{ .var_decl = try VarDecl.parse(parser, allocator) orelse return null },
             else => .{ .expr = try Expr.parse(parser, allocator) orelse return null },
         };

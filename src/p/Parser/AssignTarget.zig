@@ -15,8 +15,8 @@ pub const AssignTarget = union(enum) {
     id: Token,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (parser.tokens.peek() orelse return null) {
-            .identifier => .{ .id = try parser.tokens.next().? },
+        return switch ((parser.tokens.peek() orelse return null).tag) {
+            .identifier => .{ .id = parser.tokens.next().? },
             else => .{ .prop = try AssignTargetProperty.parse(parser, allocator) orelse return null },
         };
     }
