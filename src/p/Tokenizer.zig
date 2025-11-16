@@ -9,23 +9,20 @@ const ascii = std.ascii;
 const Allocator = mem.Allocator;
 const ArrayList = std.ArrayList;
 
-const util = @import("util.zig");
-const term = util.term;
-
-const Tokenizer = @This();
+pub const Token = @import("Tokenizer/Token.zig");
 
 src: []const u8,
 pos: usize = 0,
 
-pub fn init(src: []const u8) Tokenizer {
+pub fn init(src: []const u8) @This() {
     return .{ .src = src };
 }
 
-pub fn reset(this: *Tokenizer) void {
+pub fn reset(this: *@This()) void {
     this.pos = 0;
 }
 
-pub fn next(this: *Tokenizer) ?Token {
+pub fn next(this: *@This()) ?Token {
     if (this.pos >= this.src.len) return null;
     defer this.pos += 1;
 
@@ -60,7 +57,7 @@ pub fn next(this: *Tokenizer) ?Token {
     };
 }
 
-pub fn peek(this: *Tokenizer) ?Token {
+pub fn peek(this: *@This()) ?Token {
     const old = this.pos;
     defer this.pos = old;
 
@@ -106,11 +103,11 @@ fn token(this: *const @This(), comptime tag: Token.Tag) Token {
     };
 }
 
-fn nextChar(this: *Tokenizer) ?u8 {
+fn nextChar(this: *@This()) ?u8 {
     return if (this.pos + 1 >= this.src.len) return null else this.src[this.pos + 1];
 }
 
-fn number(this: *Tokenizer) Token {
+fn number(this: *@This()) Token {
     var idx = this.pos;
     while (idx < this.src.len and
         ascii.isDigit(this.src[idx])) : (idx += 1)
@@ -133,7 +130,7 @@ fn number(this: *Tokenizer) Token {
     };
 }
 
-fn string(this: *Tokenizer) ?Token {
+fn string(this: *@This()) ?Token {
     const begin = this.pos;
 
     this.pos += 1;
@@ -149,7 +146,7 @@ fn string(this: *Tokenizer) ?Token {
     return null;
 }
 
-fn keywordOrIdentifier(this: *Tokenizer) Token {
+fn keywordOrIdentifier(this: *@This()) Token {
     var idx = this.pos;
     defer this.pos = idx - 1;
 
@@ -164,13 +161,13 @@ fn keywordOrIdentifier(this: *Tokenizer) Token {
     };
 }
 
-fn skipWhitespace(this: *Tokenizer) void {
+fn skipWhitespace(this: *@This()) void {
     while (this.pos < this.src.len and
         ascii.isWhitespace(this.src[this.pos])) : (this.pos += 1)
     {}
 }
 
-fn commentSingle(this: *Tokenizer) ?Token {
+fn commentSingle(this: *@This()) ?Token {
     const begin = this.pos;
 
     while (this.pos < this.src.len and this.src[this.pos] != '\n') : (this.pos += 1) {}
@@ -183,7 +180,7 @@ fn commentSingle(this: *Tokenizer) ?Token {
     };
 }
 
-fn commentMulti(this: *Tokenizer) ?Token {
+fn commentMulti(this: *@This()) ?Token {
     const begin = this.pos;
     this.pos += 2;
     var window = mem.window(u8, this.src[this.pos..], 2, 1);
@@ -201,124 +198,6 @@ fn commentMulti(this: *Tokenizer) ?Token {
 
     return null;
 }
-
-pub const Location = struct {
-    line: usize,
-    column: usize,
-
-    pub fn fromSourceSpan(src: []const u8, span: Token.Span) @This() {
-        const line = mem.count(u8, src[0..span.start], '\n') + 1;
-        const last_newline_idx = mem.findLast(u8, src[0..span.start], '\n');
-        const line_start_pos = if (last_newline_idx) |idx| idx + 1 else 0;
-        const column = (span.start - line_start_pos) + 1;
-
-        return .{ .line = line, .column = column };
-    }
-};
-
-pub const Token = struct {
-    tag: Tag,
-    span: Span = .{},
-    value: []const u8,
-
-    // [start, end)
-    pub const Span = struct {
-        start: usize = 0,
-        end: usize = 0,
-    };
-
-    pub const Tag = enum {
-        @"(",
-        @")",
-        @"{",
-        @"}",
-        @",",
-        @".",
-        @"-",
-        @"+",
-        @";",
-        @"/",
-        @"*",
-        @"!",
-        @"!=",
-        @"=",
-        @"==",
-        @">",
-        @">=",
-        @"<",
-        @"<=",
-        identifier,
-        string,
-        number,
-        comment,
-        @"and",
-        object,
-        @"else",
-        false,
-        @"fn",
-        @"for",
-        @"if",
-        nil,
-        @"or",
-        print,
-        @"return",
-        proto,
-        extends,
-        this,
-        true,
-        let,
-        @"while",
-        invalid,
-    };
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .token = this } };
-    }
-
-    const Format = struct {
-        depth: usize = 0,
-        token: *const Token,
-
-        pub fn format(this: @This(), writer: *Io.Writer) Io.Writer.Error!void {
-            const depth = this.depth;
-            for (0..depth) |_| try writer.print(term.SEP, .{});
-
-            switch (this.token.tag) {
-                .number,
-                .string,
-                => try writer.print("{s}Token{{.{t} = {s}{s}{s}}}{s}\n", .{
-                    term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
-                    this.token.tag,
-                    term.FG.WHITE ++ term.FG.EFFECT.UNDERLINE,
-                    this.token.value,
-                    term.FG.MAGENTA ++ term.FG.EFFECT.RESET.UNDERLINE,
-                    term.RESET,
-                }),
-                .identifier => try writer.print("{s}Token{{.{t} = {s}{s}{s}}}{s}\n", .{
-                    term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
-                    this.token.tag,
-                    term.FG.WHITE ++ term.FG.EFFECT.UNDERLINE,
-                    this.token.value,
-                    term.RESET ++ term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
-                    term.RESET,
-                }),
-                .comment => try writer.print("{s}Token{{.{t} = {s}{s}{s}}}{s}\n", .{
-                    term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
-                    this.token.tag,
-                    term.FG.GREEN ++ term.FG.EFFECT.UNDERLINE,
-                    this.token.value,
-                    term.RESET ++ term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
-                    term.RESET,
-                }),
-                else => try writer.print("{s}Token.{t}{s}\n", .{
-                    term.FG.MAGENTA ++ term.FG.EFFECT.ITALIC,
-                    this.token.tag,
-                    term.RESET,
-                }),
-            }
-        }
-    };
-};
 
 const KEYWORDS = StaticStringMap(Token.Tag).initComptime(.{
     .{ "and", .@"and" },

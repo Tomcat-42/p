@@ -34,38 +34,32 @@ Expr           = Assign;
 
 Assign         = AssignExpr | LogicOr;
 AssignExpr     = AssignTarget, "=", Assign;
-AssignTarget   = AssignTargetProperty | AssignTargetVar;
-AssignTargetVar = ID;
+AssignTarget   = AssignTargetProperty | ID;
 AssignTargetProperty = Call, ".", ID;
 
-LogicOr        = LogicAnd, { LogicOrSuffix };
-LogicOrSuffix  = "or", LogicAnd;
+LogicOr        = LogicAnd, { LogicOrExpr };
+LogicOrExpr  = "or", LogicAnd;
 
-LogicAnd       = Equality, { LogicAndSuffix };
-LogicAndSuffix = "and", Equality;
+LogicAnd       = Equality, { LogicAndExpr };
+LogicAndExpr = "and", Equality;
 
-Equality       = Comparison, { EqualitySuffix };
-EqualitySuffix = EqualityOp, Comparison;
-EqualityOp     = "!=" | "==";
+Equality       = Comparison, { EqualityExpr };
+EqualityExpr = "!=" | "==", Comparison;
 
-Comparison     = Term, { ComparisonSuffix };
-ComparisonSuffix = ComparisonOp, Term;
-ComparisonOp   = ">" | ">=" | "<" | "<=";
+Comparison     = Term, { ComparisonExpr };
+ComparisonExpr = ">" | ">=" | "<" | "<=", Term;
 
-Term           = Factor, { TermSuffix };
-TermSuffix     = TermOp, Factor;
-TermOp         = "-" | "+";
+Term           = Factor, { TermExpr };
+TermExpr     = "-" | "+", Factor;
 
-Factor         = Unary, { FactorSuffix };
-FactorSuffix   = FactorOp, Unary;
-FactorOp       = "/" | "*";
+Factor         = Unary, { FactorExpr };
+FactorExpr   = "/" | "*", Unary;
 
 Unary          = UnaryExpr | Call;
-UnaryExpr      = UnaryOp, Unary;
-UnaryOp        = "!" | "-";
+UnaryExpr      = "!" | "-", Unary;
 
-Call          = Primary, { CallSuffix };
-CallSuffix    = CallFn | CallProperty;
+Call          = Primary, { CallExpr };
+CallExpr    = CallFn | CallProperty;
 CallFn         = "(", { FnArg }, ")";
 CallProperty  = ".", ID;
 FnArg          = Expr, [ "," ];
@@ -81,7 +75,7 @@ Primary        = "true"
                | ProtoAccess;
 
 GroupExpr     = "(", Expr, ")";
-ProtoAccess    = "proto", ".", ID;
+ProtoAccessExpr    = "proto", ".", ID;
 
 ALPHA          = "A" .. "Z" | "a" .. "z" | "_";
 DIGIT          = "0" .. "9";

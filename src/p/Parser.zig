@@ -7,13 +7,250 @@ const fmt = std.fmt;
 const Allocator = mem.Allocator;
 const ArrayList = std.ArrayList;
 
-const util = @import("util");
-const t = util.term;
 const p = @import("p");
 const Tokenizer = p.Tokenizer;
 const Token = Tokenizer.Token;
+const util = @import("util");
+const term = util.term;
 
-const Parser = @This();
+pub const Assign = @import("Parser/Assign.zig").Assign;
+pub const Expr = Assign;
+pub const ForCond = Expr;
+pub const ForInc = Expr;
+pub const IfCond = Expr;
+pub const AssignExpr = @import("Parser/AssignExpr.zig");
+pub const AssignTarget = @import("Parser/AssignTarget.zig").AssignTarget;
+pub const AssignTargetProperty = @import("Parser/AssignTargetProperty.zig");
+pub const Block = @import("Parser/Block.zig");
+pub const Call = @import("Parser/Call.zig");
+pub const CallExpr = @import("Parser/CallExpr.zig").CallExpr;
+pub const CallFn = @import("Parser/CallFn.zig");
+pub const CallProperty = @import("Parser/CallProperty.zig");
+pub const Comparison = @import("Parser/Comparison.zig");
+pub const ComparisonExpr = @import("Parser/ComparisonExpr.zig");
+pub const Decl = @import("Parser/Decl.zig").Decl;
+pub const Equality = @import("Parser/Equality.zig");
+pub const EqualityExpr = @import("Parser/EqualityExpr.zig");
+pub const ExprStmt = @import("Parser/ExprStmt.zig");
+pub const Factor = @import("Parser/Factor.zig");
+pub const FactorExpr = @import("Parser/FactorExpr.zig");
+pub const FnArg = @import("Parser/FnArg.zig");
+pub const FnDecl = @import("Parser/FnDecl.zig");
+pub const FnParam = @import("Parser/FnParam.zig");
+pub const ForInit = @import("Parser/ForInit.zig").ForInit;
+pub const ForStmt = @import("Parser/ForStmt.zig");
+pub const GroupExpr = @import("Parser/GroupExpr.zig");
+pub const IfElseBranch = @import("Parser/IfElseBranch.zig");
+pub const IfStmt = @import("Parser/IfStmt.zig");
+pub const LogicAnd = @import("Parser/LogicAnd.zig");
+pub const LogicAndExpr = @import("Parser/LogicAndExpr.zig");
+pub const LogicOr = @import("Parser/LogicOr.zig");
+pub const LogicOrExpr = @import("Parser/LogicOrExpr.zig");
+pub const ObjDecl = @import("Parser/ObjDecl.zig");
+pub const ObjDeclExtends = @import("Parser/ObjDeclExtends.zig");
+pub const Primary = @import("Parser/Primary.zig").Primary;
+pub const PrintStmt = @import("Parser/PrintStmt.zig");
+pub const Program = @import("Parser/Program.zig");
+pub const ProtoAccess = @import("Parser/ProtoAccess.zig");
+pub const ReturnStmt = @import("Parser/ReturnStmt.zig");
+pub const Stmt = @import("Parser/Stmt.zig").Stmt;
+pub const IfMainBranch = Stmt;
+pub const Term = @import("Parser/Term.zig");
+pub const TermExpr = @import("Parser/TermExpr.zig");
+pub const Unary = @import("Parser/Unary.zig").Unary;
+pub const UnaryExpr = @import("Parser/UnaryExpr.zig");
+pub const VarDecl = @import("Parser/VarDecl.zig");
+pub const VarDeclInit = @import("Parser/VarDeclInit.zig");
+pub const WhileStmt = @import("Parser/WhileStmt.zig");
+
+pub const Visitor = struct {
+    ptr: *anyopaque,
+    vtable: VTable,
+
+    pub const VTable = struct {
+        visitProgram: *const fn (this: *anyopaque, node: *const Program) ?*anyopaque,
+        visitDecl: *const fn (this: *anyopaque, node: *const Decl) ?*anyopaque,
+        visitObjDecl: *const fn (this: *anyopaque, node: *const ObjDecl) ?*anyopaque,
+        visitObjDeclExtends: *const fn (this: *anyopaque, node: *const ObjDeclExtends) ?*anyopaque,
+        visitFnDecl: *const fn (this: *anyopaque, node: *const FnDecl) ?*anyopaque,
+        visitFnParam: *const fn (this: *anyopaque, node: *const FnParam) ?*anyopaque,
+        visitVarDecl: *const fn (this: *anyopaque, node: *const VarDecl) ?*anyopaque,
+        visitVarDeclInit: *const fn (this: *anyopaque, node: *const VarDeclInit) ?*anyopaque,
+
+        visitStmt: *const fn (this: *anyopaque, node: *const Stmt) ?*anyopaque,
+        visitExprStmt: *const fn (this: *anyopaque, node: *const ExprStmt) ?*anyopaque,
+        visitForStmt: *const fn (this: *anyopaque, node: *const ForStmt) ?*anyopaque,
+        visitForInit: *const fn (this: *anyopaque, node: *const ForInit) ?*anyopaque,
+        visitIfStmt: *const fn (this: *anyopaque, node: *const IfStmt) ?*anyopaque,
+        visitIfElseBranch: *const fn (this: *anyopaque, node: *const IfElseBranch) ?*anyopaque,
+        visitPrintStmt: *const fn (this: *anyopaque, node: *const PrintStmt) ?*anyopaque,
+        visitReturnStmt: *const fn (this: *anyopaque, node: *const ReturnStmt) ?*anyopaque,
+        visitWhileStmt: *const fn (this: *anyopaque, node: *const WhileStmt) ?*anyopaque,
+        visitBlock: *const fn (this: *anyopaque, node: *const Block) ?*anyopaque,
+
+        visitAssign: *const fn (this: *anyopaque, node: *const Assign) ?*anyopaque,
+        visitAssignExpr: *const fn (this: *anyopaque, node: *const AssignExpr) ?*anyopaque,
+        visitAssignTarget: *const fn (this: *anyopaque, node: *const AssignTarget) ?*anyopaque,
+        visitAssignTargetProperty: *const fn (this: *anyopaque, node: *const AssignTargetProperty) ?*anyopaque,
+        visitLogicOr: *const fn (this: *anyopaque, node: *const LogicOr) ?*anyopaque,
+        visitLogicOrExpr: *const fn (this: *anyopaque, node: *const LogicOrExpr) ?*anyopaque,
+        visitLogicAnd: *const fn (this: *anyopaque, node: *const LogicAnd) ?*anyopaque,
+        visitLogicAndExpr: *const fn (this: *anyopaque, node: *const LogicAndExpr) ?*anyopaque,
+        visitEquality: *const fn (this: *anyopaque, node: *const Equality) ?*anyopaque,
+        visitEqualityExpr: *const fn (this: *anyopaque, node: *const EqualityExpr) ?*anyopaque,
+        visitComparison: *const fn (this: *anyopaque, node: *const Comparison) ?*anyopaque,
+        visitComparisonExpr: *const fn (this: *anyopaque, node: *const ComparisonExpr) ?*anyopaque,
+        visitTerm: *const fn (this: *anyopaque, node: *const Term) ?*anyopaque,
+        visitTermExpr: *const fn (this: *anyopaque, node: *const TermExpr) ?*anyopaque,
+        visitFactor: *const fn (this: *anyopaque, node: *const Factor) ?*anyopaque,
+        visitFactorExpr: *const fn (this: *anyopaque, node: *const FactorExpr) ?*anyopaque,
+        visitUnary: *const fn (this: *anyopaque, node: *const Unary) ?*anyopaque,
+        visitUnaryExpr: *const fn (this: *anyopaque, node: *const UnaryExpr) ?*anyopaque,
+        visitCall: *const fn (this: *anyopaque, node: *const Call) ?*anyopaque,
+        visitCallExpr: *const fn (this: *anyopaque, node: *const CallExpr) ?*anyopaque,
+        visitCallFn: *const fn (this: *anyopaque, node: *const CallFn) ?*anyopaque,
+        visitCallProperty: *const fn (this: *anyopaque, node: *const CallProperty) ?*anyopaque,
+        visitFnArg: *const fn (this: *anyopaque, node: *const FnArg) ?*anyopaque,
+        visitPrimary: *const fn (this: *anyopaque, node: *const Primary) ?*anyopaque,
+        visitGroupExpr: *const fn (this: *anyopaque, node: *const GroupExpr) ?*anyopaque,
+        visitProtoAccess: *const fn (this: *anyopaque, node: *const ProtoAccess) ?*anyopaque,
+    };
+
+    pub fn visitProgram(this: *const @This(), node: *const Program) ?*anyopaque {
+        this.vtable.visitProgram(this.ptr, node);
+    }
+    pub fn visitDecl(this: *const @This(), node: *const Decl) ?*anyopaque {
+        this.vtable.visitDecl(this.ptr, node);
+    }
+    pub fn visitObjDecl(this: *const @This(), node: *const ObjDecl) ?*anyopaque {
+        this.vtable.visitObjDecl(this.ptr, node);
+    }
+    pub fn visitObjDeclExtends(this: *const @This(), node: *const ObjDeclExtends) ?*anyopaque {
+        this.vtable.visitObjDeclExtends(this.ptr, node);
+    }
+    pub fn visitFnDecl(this: *const @This(), node: *const FnDecl) ?*anyopaque {
+        this.vtable.visitFnDecl(this.ptr, node);
+    }
+    pub fn visitFnParam(this: *const @This(), node: *const FnParam) ?*anyopaque {
+        this.vtable.visitFnParam(this.ptr, node);
+    }
+    pub fn visitVarDecl(this: *const @This(), node: *const VarDecl) ?*anyopaque {
+        this.vtable.visitVarDecl(this.ptr, node);
+    }
+    pub fn visitVarDeclInit(this: *const @This(), node: *const VarDeclInit) ?*anyopaque {
+        this.vtable.visitVarDeclInit(this.ptr, node);
+    }
+
+    pub fn visitStmt(this: *const @This(), node: *const Stmt) ?*anyopaque {
+        this.vtable.visitStmt(this.ptr, node);
+    }
+    pub fn visitExprStmt(this: *const @This(), node: *const ExprStmt) ?*anyopaque {
+        this.vtable.visitExprStmt(this.ptr, node);
+    }
+    pub fn visitForStmt(this: *const @This(), node: *const ForStmt) ?*anyopaque {
+        this.vtable.visitForStmt(this.ptr, node);
+    }
+    pub fn visitForInit(this: *const @This(), node: *const ForInit) ?*anyopaque {
+        this.vtable.visitForInit(this.ptr, node);
+    }
+    pub fn visitIfStmt(this: *const @This(), node: *const IfStmt) ?*anyopaque {
+        this.vtable.visitIfStmt(this.ptr, node);
+    }
+    pub fn visitIfElseBranch(this: *const @This(), node: *const IfElseBranch) ?*anyopaque {
+        this.vtable.visitIfElseBranch(this.ptr, node);
+    }
+    pub fn visitPrintStmt(this: *const @This(), node: *const PrintStmt) ?*anyopaque {
+        this.vtable.visitPrintStmt(this.ptr, node);
+    }
+    pub fn visitReturnStmt(this: *const @This(), node: *const ReturnStmt) ?*anyopaque {
+        this.vtable.visitReturnStmt(this.ptr, node);
+    }
+    pub fn visitWhileStmt(this: *const @This(), node: *const WhileStmt) ?*anyopaque {
+        this.vtable.visitWhileStmt(this.ptr, node);
+    }
+    pub fn visitBlock(this: *const @This(), node: *const Block) ?*anyopaque {
+        this.vtable.visitBlock(this.ptr, node);
+    }
+
+    pub fn visitAssign(this: *const @This(), node: *const Assign) ?*anyopaque {
+        this.vtable.visitAssign(this.ptr, node);
+    }
+    pub fn visitAssignExpr(this: *const @This(), node: *const AssignExpr) ?*anyopaque {
+        this.vtable.visitAssignExpr(this.ptr, node);
+    }
+    pub fn visitAssignTarget(this: *const @This(), node: *const AssignTarget) ?*anyopaque {
+        this.vtable.visitAssignTarget(this.ptr, node);
+    }
+    pub fn visitAssignTargetProperty(this: *const @This(), node: *const AssignTargetProperty) ?*anyopaque {
+        this.vtable.visitAssignTargetProperty(this.ptr, node);
+    }
+    pub fn visitLogicOr(this: *const @This(), node: *const LogicOr) ?*anyopaque {
+        this.vtable.visitLogicOr(this.ptr, node);
+    }
+    pub fn visitLogicOrExpr(this: *const @This(), node: *const LogicOrExpr) ?*anyopaque {
+        this.vtable.visitLogicOrExpr(this.ptr, node);
+    }
+    pub fn visitLogicAnd(this: *const @This(), node: *const LogicAnd) ?*anyopaque {
+        this.vtable.visitLogicAnd(this.ptr, node);
+    }
+    pub fn visitLogicAndExpr(this: *const @This(), node: *const LogicAndExpr) ?*anyopaque {
+        this.vtable.visitLogicAndExpr(this.ptr, node);
+    }
+    pub fn visitEquality(this: *const @This(), node: *const Equality) ?*anyopaque {
+        this.vtable.visitEquality(this.ptr, node);
+    }
+    pub fn visitEqualityExpr(this: *const @This(), node: *const EqualityExpr) ?*anyopaque {
+        this.vtable.visitEqualityExpr(this.ptr, node);
+    }
+    pub fn visitComparison(this: *const @This(), node: *const Comparison) ?*anyopaque {
+        this.vtable.visitComparison(this.ptr, node);
+    }
+    pub fn visitComparisonExpr(this: *const @This(), node: *const ComparisonExpr) ?*anyopaque {
+        this.vtable.visitComparisonExpr(this.ptr, node);
+    }
+    pub fn visitTerm(this: *const @This(), node: *const Term) ?*anyopaque {
+        this.vtable.visitTerm(this.ptr, node);
+    }
+    pub fn visitTermExpr(this: *const @This(), node: *const TermExpr) ?*anyopaque {
+        this.vtable.visitTermExpr(this.ptr, node);
+    }
+    pub fn visitFactor(this: *const @This(), node: *const Factor) ?*anyopaque {
+        this.vtable.visitFactor(this.ptr, node);
+    }
+    pub fn visitFactorExpr(this: *const @This(), node: *const FactorExpr) ?*anyopaque {
+        this.vtable.visitFactorExpr(this.ptr, node);
+    }
+    pub fn visitUnary(this: *const @This(), node: *const Unary) ?*anyopaque {
+        this.vtable.visitUnary(this.ptr, node);
+    }
+    pub fn visitUnaryExpr(this: *const @This(), node: *const UnaryExpr) ?*anyopaque {
+        this.vtable.visitUnaryExpr(this.ptr, node);
+    }
+    pub fn visitCall(this: *const @This(), node: *const Call) ?*anyopaque {
+        this.vtable.visitCall(this.ptr, node);
+    }
+    pub fn visitCallExpr(this: *const @This(), node: *const CallExpr) ?*anyopaque {
+        this.vtable.visitCallExpr(this.ptr, node);
+    }
+    pub fn visitCallFn(this: *const @This(), node: *const CallFn) ?*anyopaque {
+        this.vtable.visitCallFn(this.ptr, node);
+    }
+    pub fn visitCallProperty(this: *const @This(), node: *const CallProperty) ?*anyopaque {
+        this.vtable.visitCallProperty(this.ptr, node);
+    }
+    pub fn visitFnArg(this: *const @This(), node: *const FnArg) ?*anyopaque {
+        this.vtable.visitFnArg(this.ptr, node);
+    }
+    pub fn visitPrimary(this: *const @This(), node: *const Primary) ?*anyopaque {
+        this.vtable.visitPrimary(this.ptr, node);
+    }
+    pub fn visitGroupExpr(this: *const @This(), node: *const GroupExpr) ?*anyopaque {
+        this.vtable.visitGroupExpr(this.ptr, node);
+    }
+    pub fn visitProtoAccess(this: *const @This(), node: *const ProtoAccess) ?*anyopaque {
+        this.vtable.visitProtoAccess(this.ptr, node);
+    }
+};
 
 pub const Error = struct {
     message: []const u8,
@@ -23,19 +260,19 @@ pub const Error = struct {
 tokens: *Tokenizer,
 errors: ArrayList(Error) = .empty,
 
-pub fn init(tokens: *Tokenizer) Parser {
+pub fn init(tokens: *Tokenizer) @This() {
     return .{ .tokens = tokens };
 }
 
-pub fn deinit(this: *Parser, allocator: Allocator) void {
+pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.errors.deinit(allocator);
 }
 
-pub fn parse(this: *Parser, allocator: Allocator) !?Program {
+pub fn parse(this: *@This(), allocator: Allocator) !?Program {
     return .parse(this, allocator);
 }
 
-pub fn reset(this: *Parser, allocator: Allocator) void {
+pub fn reset(this: *@This(), allocator: Allocator) void {
     this.tokens.reset();
     this.errors.clearAndFree(allocator);
 }
@@ -45,7 +282,7 @@ pub fn getErrors(this: *@This()) !?[]const Error {
     return this.errors.items;
 }
 
-inline fn expectOrHandleErrorAndSync(this: *Parser, allocator: Allocator, comptime expected: anytype) !?Token {
+pub inline fn expectOrHandleErrorAndSync(this: *@This(), allocator: Allocator, comptime expected: anytype) !?Token {
     assert(@typeInfo(@TypeOf(expected)) == .@"struct");
     assert(@typeInfo(@TypeOf(expected)).@"struct".fields.len >= 1);
 
@@ -75,1347 +312,6 @@ inline fn expectOrHandleErrorAndSync(this: *Parser, allocator: Allocator, compti
     return this.tokens.sync(expected);
 }
 
-pub const Program = struct {
-    decls: []const Decl,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        var decls: ArrayList(Decl) = .empty;
-        defer decls.deinit(allocator);
-
-        while (parser.tokens.peek() != null) if (try Decl.parse(parser, allocator)) |decl| {
-            try decls.append(allocator, decl);
-        };
-
-        return .{ .decls = try decls.toOwnedSlice(allocator) };
-    }
-
-    pub fn deinit(this: *@This(), allocator: Allocator) void {
-        allocator.free(this.decls);
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitProgram(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const Decl = union(enum) {
-    ObjDecl: ObjDecl,
-    FnDecl: FnDecl,
-    VarDecl: VarDecl,
-    Stmt: Stmt,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .object => .{ .ObjDecl = try ObjDecl.parse(parser, allocator) orelse return null },
-            .@"fn" => .{ .FnDecl = try FnDecl.parse(parser, allocator) orelse return null },
-            .let => .{ .VarDecl = try VarDecl.parse(parser, allocator) orelse return null },
-            else => .{ .Stmt = try Stmt.parse(parser, allocator) orelse return null },
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitDecl(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const ObjDecl = struct {
-    object: Token,
-    id: Token,
-    extends: ?ObjDeclExtends,
-    body: Block,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const object = try parser.expectOrHandleErrorAndSync(allocator, .{.object}) orelse return null;
-        const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-        const extends: ?ObjDeclExtends = switch (try parser.tokens.peek() orelse return null) {
-            .extends => try ObjDeclExtends.parse(parser, allocator) orelse return null,
-            else => null,
-        };
-        const body = try Block.parse(parser, allocator) orelse return null;
-
-        return .{
-            .object = object,
-            .id = id,
-            .extends = extends,
-            .body = body,
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitObjDecl(this);
-    }
-};
-pub const ObjDeclExtends = struct {
-    extends: Token,
-    id: Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const extends = try parser.expectOrHandleErrorAndSync(allocator, .{.extends}) orelse return null;
-        const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-
-        return .{ .extends = extends, .id = id };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitObjDeclExtends(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const FnDecl = struct {
-    @"fn": Token,
-    id: Token,
-    @"(": Token,
-    params: []const FnParam,
-    @")": Token,
-    body: Block,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const @"fn" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"fn"}) orelse return null;
-        const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-        const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
-
-        var params: ArrayList(FnParam) = .empty;
-        defer params.deinit(allocator);
-        while (try FnParam.parse(parser, allocator)) |param|
-            try params.append(allocator, param);
-
-        const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
-        const body = try Block.parse(parser, allocator) orelse return null;
-
-        return .{
-            .@"fn" = @"fn",
-            .id = id,
-            .@"(" = @"(",
-            .params = params,
-            .@")" = @")",
-            .body = body,
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitFnDecl(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const FnParam = struct {
-    id: Token,
-    @",": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const id = try parser.expectOrHandleErrorAndSync(
-            allocator,
-            .{.identifier},
-        ) orelse return null;
-        const @"," = parser.tokens.expect(.{.@","});
-
-        return .{ .id = id, .@"," = @"," };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitFnParam(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const VarDecl = struct {
-    let: Token,
-    id: Token,
-    init: ?VarDeclInit,
-    @";": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const let = try parser.expectOrHandleErrorAndSync(allocator, .{.let}) orelse return null;
-        const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-        const initv: ?VarDeclInit = switch (try parser.tokens.peek() orelse return null) {
-            .@"=" => try VarDeclInit.parse(parser, allocator) orelse return null,
-            else => null,
-        };
-        const @";" = try parser.expectOrHandleErrorAndSync(allocator, .{.@";"}) orelse return null;
-
-        return .{
-            .let = let,
-            .id = id,
-            .init = initv,
-            .@";" = @";",
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitVarDecl(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const VarDeclInit = struct {
-    @"=": Token,
-    expr: Expr,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const @"=" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"="}) orelse return null;
-        const expr = try Expr.parse(parser, allocator) orelse return null;
-
-        return .{ .@"=" = @"=", .expr = &expr };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitVarDeclInit(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const Stmt = union(enum) {
-    expr_stmt: ExprStmt,
-    for_stmt: ForStmt,
-    if_stmt: IfStmt,
-    print_stmt: PrintStmt,
-    return_stmt: ReturnStmt,
-    while_stmt: WhileStmt,
-    block: Block,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .@"for" => .{ .for_stmt = try ForStmt.parse(parser, allocator) orelse return null },
-            .@"if" => .{ .if_stmt = try IfStmt.parse(parser, allocator) orelse return null },
-            .print => .{ .print_stmt = try PrintStmt.parse(parser, allocator) orelse return null },
-            .@"return" => .{ .return_stmt = try ReturnStmt.parse(parser, allocator) orelse return null },
-            .@"while" => .{ .while_stmt = try WhileStmt.parse(parser, allocator) orelse return null },
-            .@"{" => .{ .block = try Block.parse(parser, allocator) orelse return null },
-            else => .{ .expr_stmt = try ExprStmt.parse(parser, allocator) orelse return null },
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitStmt(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const ExprStmt = struct {
-    expr: *const Expr,
-    @";": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const expr = try Expr.parse(parser, allocator) orelse return null;
-        const @";" = try parser.expectOrHandleErrorAndSync(allocator, .{.@";"}) orelse return null;
-
-        return .{ .expr = &expr, .@";" = @";" };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitExprStmt(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const ForStmt = struct {
-    @"for": Token,
-    @"(": Token,
-    init: ?ForInit,
-    @";": Token,
-    cond: ?ForCond,
-    @";'": Token,
-    inc: ?ForInc,
-    @")": Token,
-    body: Block,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const @"for" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"for"}) orelse return null;
-        const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
-
-        const initv = try ForInit.parse(parser, allocator);
-        const @";" = try parser.expectOrHandleErrorAndSync(allocator, .{.@";"}) orelse return null;
-
-        const cond = try ForCond.parse(parser, allocator);
-        const @";'" = try parser.expectOrHandleErrorAndSync(allocator, .{.@";"}) orelse return null;
-
-        const inc = try ForInc.parse(parser, allocator);
-        const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
-        const body = try Block.parse(parser, allocator) orelse return null;
-
-        return .{
-            .@"for" = @"for",
-            .@"(" = @"(",
-            .init = initv,
-            .@";" = @";",
-            .cond = cond,
-            .@";'" = @";'",
-            .inc = inc,
-            .@")" = @")",
-            .body = body,
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitForStmt(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const ForInit = union(enum) {
-    var_decl: VarDecl,
-    expr: Expr,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .let => .{ .var_decl = try VarDecl.parse(parser, allocator) orelse return null },
-            else => .{ .expr = try Expr.parse(parser, allocator) orelse return null },
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitForInit(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const ForCond = Expr;
-pub const ForInc = Expr;
-
-pub const IfStmt = struct {
-    @"if": Token,
-    @"(": Token,
-    cond: IfCond,
-    @")": Token,
-    main_branch: IfMainBranch,
-    else_branch: ?IfElseBranch,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const @"if" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"if"}) orelse return null;
-        const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
-        const cond = try IfCond.parse(parser, allocator) orelse return null;
-        const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
-        const main_branch = try IfMainBranch.parse(parser, allocator) orelse return null;
-        const else_branch = try IfElseBranch.parse(parser, allocator);
-
-        return .{
-            .@"if" = @"if",
-            .@"(" = @"(",
-            .cond = cond,
-            .@")" = @")",
-            .main_branch = main_branch,
-            .else_branch = else_branch,
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitIfStmt(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const IfCond = Expr;
-pub const IfMainBranch = Stmt;
-pub const IfElseBranch = struct {
-    @"else": Token,
-    stmt: Stmt,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const @"else" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"else"}) orelse return null;
-        const stmt = try Stmt.parse(parser, allocator) orelse return null;
-
-        return .{ .@"else" = @"else", .stmt = stmt };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitIfElseBranch(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const PrintStmt = struct {
-    print: Token,
-    @"(": Token,
-    expr: Expr,
-    @")": Token,
-    @";": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const print = try parser.expectOrHandleErrorAndSync(allocator, .{.print}) orelse return null;
-        const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
-        const expr = try Expr.parse(parser, allocator) orelse return null;
-        const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
-        const @";" = try parser.expectOrHandleErrorAndSync(allocator, .{.@";"}) orelse return null;
-
-        return .{
-            .print = print,
-            .@"(" = @"(",
-            .expr = &expr,
-            .@")" = @")",
-            .@";" = @";",
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitPrintStmt(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const ReturnStmt = struct {
-    @"return": Token,
-    expr: ?Expr,
-    @";": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const @"return" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"return"}) orelse return null;
-        const expr = try Expr.parse(parser, allocator);
-        const @";" = try parser.expectOrHandleErrorAndSync(allocator, .{.@";"}) orelse return null;
-
-        return .{
-            .@"return" = @"return",
-            .expr = expr,
-            .@";" = @";",
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitReturnStmt(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const WhileStmt = struct {
-    @"while": Token,
-    @"(": Token,
-    cond: Expr,
-    @")": Token,
-    body: Block,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const @"while" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"while"}) orelse return null;
-        const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
-        const cond = try Expr.parse(parser, allocator) orelse return null;
-        const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
-        const body = try Block.parse(parser, allocator) orelse return null;
-
-        return .{
-            .@"while" = @"while",
-            .@"(" = @"(",
-            .cond = &cond,
-            .@")" = @")",
-            .body = body,
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitWhileStmt(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const Block = struct {
-    @"{": Token,
-    stmts: []const Stmt,
-    @"}": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const @"{" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"{"}) orelse return null;
-
-        var stmts: ArrayList(Stmt) = .empty;
-        defer stmts.deinit(allocator);
-        while (try Stmt.parse(parser, allocator)) |stmt|
-            try stmts.append(allocator, stmt);
-
-        const @"}" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"}"}) orelse return null;
-
-        return .{
-            .@"{" = @"{",
-            .stmts = try stmts.toOwnedSlice(allocator),
-            .@"}" = @"}",
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitBlock(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const Expr = Assign;
-
-pub const Assign = union(enum) {
-    assign_expr: *const AssignExpr,
-    logic_or: *const LogicOr,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        if (try AssignExpr.parse(parser, allocator)) |expr|
-            return .{ .assign_expr = try allocator.dupe(@This(), expr) };
-
-        const logic_or = try LogicOr.parse(parser, allocator) orelse return null;
-        return .{ .logic_or = try allocator.dupe(LogicOr, &logic_or) };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitAssign(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const AssignExpr = struct {
-    target: AssignTarget,
-    @"=": Token,
-    value: Assign,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const target = try AssignTarget.parse(parser, allocator) orelse return null;
-        const @"=" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"="}) orelse return null;
-        const value = try Assign.parse(parser, allocator) orelse return null;
-
-        return .{ .target = target, .op = @"=", .value = value };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitAssignExpr(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const AssignTarget = union(enum) {
-    prop: AssignTargetProperty,
-    id: Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (parser.tokens.peek() orelse return null) {
-            .identifier => .{ .id = try parser.tokens.next().? },
-            else => .{ .prop = try AssignTargetProperty.parse(parser, allocator) orelse return null },
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitAssignTarget(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const AssignTargetProperty = struct {
-    call: Call,
-    @".": Token,
-    id: Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const call = try Call.parse(parser, allocator) orelse return null;
-        const dot = try parser.expectOrHandleErrorAndSync(allocator, .{.@"."}) orelse return null;
-        const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-
-        return .{ .call = call, .@"." = dot, .id = id };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitAssignTargetProperty(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const LogicOr = struct {
-    first: LogicAnd,
-    suffixes: []const LogicOrSuffix,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const first = try LogicAnd.parse(parser, allocator) orelse return null;
-
-        var suffixes: ArrayList(LogicOrSuffix) = .empty;
-        defer suffixes.deinit(allocator);
-        while (try LogicOrSuffix.parse(parser, allocator)) |suffix|
-            try suffixes.append(allocator, suffix);
-
-        return .{
-            .first = first,
-            .suffixes = try suffixes.toOwnedSlice(allocator),
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitLogicOr(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const LogicOrSuffix = struct {
-    op: LogicOrOp,
-    logic_and: LogicAnd,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const op = try LogicOrOp.parse(parser, allocator) orelse return null;
-        const logic_and = try LogicAnd.parse(parser, allocator) orelse return null;
-
-        return .{ .op = op, .logic_and = logic_and };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitLogicOrSuffix(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const LogicOrOp = union(enum) {
-    @"or": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .@"or" => .{ .@"or" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"or"}) orelse return null },
-            else => return null,
-        };
-    }
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitLogicOrOp(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const LogicAnd = struct {
-    first: Equality,
-    suffixes: []const LogicAndSuffix,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const first = try Equality.parse(parser, allocator) orelse return null;
-
-        var suffixes: ArrayList(LogicAndSuffix) = .empty;
-        defer suffixes.deinit(allocator);
-        while (try LogicAndSuffix.parse(parser, allocator)) |suffix|
-            try suffixes.append(allocator, suffix);
-
-        return .{
-            .first = first,
-            .suffixes = try suffixes.toOwnedSlice(allocator),
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitLogicAnd(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const LogicAndSuffix = struct {
-    op: LogicAndOp,
-    equality: Equality,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const op = try LogicAndOp.parse(parser, allocator) orelse return null;
-        const equality = try Equality.parse(parser, allocator) orelse return null;
-
-        return .{ .op = op, .equality = equality };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitLogicAndSuffix(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const LogicAndOp = union(enum) {
-    @"and": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .@"and" => .{ .@"and" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"and"}) orelse return null },
-            else => return null,
-        };
-    }
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitLogicAndOp(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const Equality = struct {
-    first: Comparison,
-    suffixes: []const EqualitySuffix,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const first = try Comparison.parse(parser, allocator) orelse return null;
-
-        var suffixes: ArrayList(EqualitySuffix) = .empty;
-        defer suffixes.deinit(allocator);
-        while (try EqualitySuffix.parse(parser, allocator)) |suffix|
-            try suffixes.append(allocator, suffix);
-
-        return .{
-            .first = first,
-            .suffixes = try suffixes.toOwnedSlice(allocator),
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitEquality(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const EqualitySuffix = struct {
-    op: EqualityOp,
-    comparison: Comparison,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const op = try EqualityOp.parse(parser, allocator) orelse return null;
-        const comparison = try Comparison.parse(parser, allocator) orelse return null;
-
-        return .{ .op = op, .comparison = comparison };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitEqualitySuffix(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-pub const EqualityOp = union(enum) {
-    @"!=": Token,
-    @"==": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .@"!=" => .{ .@"!=" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"!="}) orelse return null },
-            .@"==" => .{ .@"==" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"=="}) orelse return null },
-            else => return null,
-        };
-    }
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitEqualityOp(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const Comparison = struct {
-    first: Term,
-    suffixes: []const ComparisonSuffix,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const first = try Term.parse(parser, allocator) orelse return null;
-
-        var suffixes: ArrayList(ComparisonSuffix) = .empty;
-        defer suffixes.deinit(allocator);
-        while (try ComparisonSuffix.parse(parser, allocator)) |suffix|
-            try suffixes.append(allocator, suffix);
-
-        return .{
-            .first = first,
-            .suffixes = try suffixes.toOwnedSlice(allocator),
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitComparison(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const ComparisonSuffix = struct {
-    op: ComparisonOp,
-    term: Term,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const op = try ComparisonOp.parse(parser, allocator) orelse return null;
-        const term = try Term.parse(parser, allocator) orelse return null;
-
-        return .{ .op = op, .term = term };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitComparisonSuffix(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const ComparisonOp = union(enum) {
-    @">": Token,
-    @">=": Token,
-    @"<": Token,
-    @"<=": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .@">" => .{ .@">" = try parser.expectOrHandleErrorAndSync(allocator, .{.@">"}) orelse return null },
-            .@">=" => .{ .@">=" = try parser.expectOrHandleErrorAndSync(allocator, .{.@">="}) orelse return null },
-            .@"<" => .{ .@"<" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"<"}) orelse return null },
-            .@"<=" => .{ .@"<=" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"<="}) orelse return null },
-            else => return null,
-        };
-    }
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitComparisonOp(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const Term = struct {
-    first: Factor,
-    suffixes: []const TermSuffix,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const first = try Factor.parse(parser, allocator) orelse return null;
-
-        var suffixes: ArrayList(TermSuffix) = .empty;
-        defer suffixes.deinit(allocator);
-        while (try TermSuffix.parse(parser, allocator)) |suffix|
-            try suffixes.append(allocator, suffix);
-
-        return .{
-            .first = first,
-            .suffixes = try suffixes.toOwnedSlice(allocator),
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitTerm(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const TermSuffix = struct {
-    op: TermOp,
-    factor: Factor,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const op = try TermOp.parse(parser, allocator) orelse return null;
-        const factor = try Factor.parse(parser, allocator) orelse return null;
-
-        return .{ .op = op, .factor = factor };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitTermSuffix(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const TermOp = union(enum) {
-    plus: Token,
-    minus: Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .@"+" => .{ .plus = try parser.expectOrHandleErrorAndSync(allocator, .{.@"+"}) orelse return null },
-            .@"-" => .{ .minus = try parser.expectOrHandleErrorAndSync(allocator, .{.@"-"}) orelse return null },
-            else => return null,
-        };
-    }
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitTermOp(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const Factor = struct {
-    first: Unary,
-    suffixes: []const FactorSuffix,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const first = try Unary.parse(parser, allocator) orelse return null;
-
-        var suffixes: ArrayList(FactorSuffix) = .empty;
-        defer suffixes.deinit(allocator);
-        while (try FactorSuffix.parse(parser, allocator)) |suffix|
-            try suffixes.append(allocator, suffix);
-
-        return .{
-            .first = first,
-            .suffixes = try suffixes.toOwnedSlice(allocator),
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitFactor(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const FactorSuffix = struct {
-    op: FactorOp,
-    unary: Unary,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const op = try FactorOp.parse(parser, allocator) orelse return null;
-        const unary = try Unary.parse(parser, allocator) orelse return null;
-
-        return .{ .op = op, .unary = unary };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitFactorSuffix(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const FactorOp = union(enum) {
-    mul: Token,
-    div: Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .@"*" => .{ .mul = try parser.expectOrHandleErrorAndSync(allocator, .{.@"*"}) orelse return null },
-            .@"/" => .{ .div = try parser.expectOrHandleErrorAndSync(allocator, .{.@"/"}) orelse return null },
-            else => return null,
-        };
-    }
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitFactorOp(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const Unary = union(enum) {
-    unary_expr: *const UnaryExpr,
-    call: Call,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .@"-", .@"!" => .{ .unary_expr = try allocator.dupe(UnaryExpr, try UnaryExpr.parse(parser, allocator) orelse return null) },
-            else => .{ .call = try Call.parse(parser, allocator) orelse return null },
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitUnary(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const UnaryExpr = struct {
-    op: UnaryOp,
-    call: Unary,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const op = try UnaryOp.parse(parser, allocator);
-        const call = try Call.parse(parser, allocator) orelse return null;
-
-        return .{ .op = op, .call = call };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitUnaryExpr(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const UnaryOp = union(enum) {
-    neg: Token,
-    not: Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .@"-" => .{ .neg = try parser.expectOrHandleErrorAndSync(allocator, .{.@"-"}) orelse return null },
-            .@"!" => .{ .not = try parser.expectOrHandleErrorAndSync(allocator, .{.@"!"}) orelse return null },
-            else => return null,
-        };
-    }
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitUnaryOp(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const Call = struct {
-    primary: Primary,
-    calls: []const CallSuffix,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const primary = try Primary.parse(parser, allocator) orelse return null;
-
-        var calls: ArrayList(CallSuffix) = .empty;
-        defer calls.deinit(allocator);
-        while (try CallSuffix.parse(parser, allocator)) |suffix|
-            try calls.append(allocator, suffix);
-
-        return .{
-            .primary = primary,
-            .calls = try calls.toOwnedSlice(allocator),
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitCall(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const CallSuffix = union(enum) {
-    call_fn: CallFn,
-    call_property: CallProperty,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .@"(" => .{ .call_fn = try CallFn.parse(parser, allocator) orelse return null },
-            .@"." => .{ .call_property = try CallProperty.parse(parser, allocator) orelse return null },
-            else => return null,
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitCallSuffix(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const CallFn = struct {
-    @"(": Token,
-    args: []const FnArg,
-    @")": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
-
-        var args: ArrayList(FnArg) = .empty;
-        defer args.deinit(allocator);
-        while (try FnArg.parse(parser, allocator)) |arg|
-            try args.append(allocator, arg);
-
-        const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
-
-        return .{ .@"(" = @"(", .args = try args.toOwnedSlice(allocator), .@")" = @")" };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitCallFn(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const CallProperty = struct {
-    @".": Token,
-    id: Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const @"." = try parser.expectOrHandleErrorAndSync(allocator, .{.@"."}) orelse return null;
-        const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-
-        return .{ .@"." = @".", .id = id };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitCallProperty(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const FnArg = struct {
-    expr: Expr,
-    @",": ?Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const expr = try Expr.parse(parser, allocator) orelse return null;
-        const @"," = parser.tokens.expect(.{.@","});
-
-        return .{ .expr = expr, .@"," = @"," };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitFnArg(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const Primary = union(enum) {
-    true: Token,
-    false: Token,
-    nil: Token,
-    this: Token,
-    number: Token,
-    string: Token,
-    id: Token,
-    group_expr: PrimaryGroupExpr,
-    proto_access: PrimaryProtoAccess,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
-            .true => .{ .true = parser.tokens.next().? },
-            .false => .{ .false = parser.tokens.next().? },
-            .nil => .{ .nil = parser.tokens.next().? },
-            .this => .{ .this = parser.tokens.next().? },
-            .number => .{ .number = parser.tokens.next().? },
-            .string => .{ .string = parser.tokens.next().? },
-            .identifier => .{ .id = parser.tokens.next().? },
-            .@"(" => .{ .group_expr = try PrimaryGroupExpr.parse(parser, allocator) orelse return null },
-            .proto => .{ .proto_access = try PrimaryProtoAccess.parse(parser, allocator) orelse return null },
-            else => return null,
-        };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitPrimary(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const PrimaryGroupExpr = struct {
-    @"(": Token,
-    expr: Expr,
-    @")": Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
-        const expr = try Expr.parse(parser, allocator) orelse return null;
-        const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
-
-        return .{ .@"(" = @"(", .expr = &expr, .@")" = @")" };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitGroupExpr(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
-pub const PrimaryProtoAccess = struct {
-    proto: Token,
-    @".": Token,
-    id: Token,
-
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const proto = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-        const @"." = try parser.expectOrHandleErrorAndSync(allocator, .{.@"."}) orelse return null;
-        const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-
-        return .{ .proto = proto, .@"." = @".", .id = id };
-    }
-
-    pub fn visit(this: *const @This(), visitor: Visitor) void {
-        visitor.visitProtoAccess(this);
-    }
-
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
-
-    const Format = MakeFormat(@This());
-};
-
 fn MakeFormat(T: type) type {
     return struct {
         depth: usize = 0,
@@ -1424,8 +320,8 @@ fn MakeFormat(T: type) type {
         pub fn format(this: @This(), writer: *Io.Writer) Io.Writer.Error!void {
             const depth = this.depth;
 
-            for (0..depth) |_| try writer.print(t.SEP, .{});
-            try writer.print("{s}{s}{s}\n", .{ t.FG.BLUE, @typeName(T), t.RESET });
+            for (0..depth) |_| try writer.print(term.SEP, .{});
+            try writer.print("{s}{s}{s}\n", .{ term.FG.BLUE, @typeName(T), term.RESET });
 
             switch (@typeInfo(T)) {
                 .@"struct" => |s| inline for (s.fields) |field| switch (@typeInfo(field.type)) {
@@ -1445,16 +341,3 @@ fn MakeFormat(T: type) type {
         }
     };
 }
-
-pub const Visitor = struct {
-    ptr: *anyopaque,
-    vtable: VTable,
-
-    pub const VTable = struct {
-        visitProgram: *const fn (this: *anyopaque, expr: *const Expr) *anyopaque,
-    };
-
-    pub fn visitProgram(this: *Visitor, expr: *const Expr) void {
-        this.vtable.visitProgram(this.ptr, expr);
-    }
-};

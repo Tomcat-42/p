@@ -1,0 +1,31 @@
+const std = @import("std");
+const fmt = std.fmt;
+const mem = std.mem;
+const Allocator = mem.Allocator;
+
+const p = @import("p");
+const Parser = p.Parser;
+const Factor = Parser.Factor;
+const Visitor = Parser.Visitor;
+const MakeFormat = Parser.MakeFormat;
+const Token = p.Tokenizer.Token;
+
+op: Token,
+factor: Factor,
+
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const op = try parser.expectOrHandleErrorAndSync(allocator, .{ .@"+", .@"-" }) orelse return null;
+    const factor = try Factor.parse(parser, allocator) orelse return null;
+
+    return .{ .op = op, .factor = factor };
+}
+
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitExpr)).@"fn".return_type.? {
+    return visitor.visitTermExpr(this);
+}
+
+pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
+    return .{ .data = .{ .depth = depth, .data = this } };
+}
+
+const Format = MakeFormat(@This());
