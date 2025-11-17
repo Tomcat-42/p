@@ -28,22 +28,22 @@ const Repl = struct {
             e.message,
             color.RESET,
         });
+
+        try stderr.flush();
     }
 
     pub fn eval(this: *const @This(), allocator: Allocator, code: []const u8) !void {
-        _ = this; // autofix
-        _ = allocator; // autofix
         var tokens: Tokenizer = .init(code);
-        while (tokens.next()) |tok| std.debug.print("{f}\n", .{tok.format(1)});
+        while (tokens.next()) |tok| std.debug.print("{f}", .{tok.format(0)});
+        tokens.reset();
 
-        // var parser: Parser = .init(&tokens);
-        // defer parser.deinit(allocator);
-        //
-        // const ast = try parser.parse(allocator);
-        // _ = ast; // autofix
-        //
-        // if (try parser.getErrors()) |errors| try this.reportErrors(errors);
+        var parser: Parser = .init(&tokens);
+        defer parser.deinit(allocator);
 
+        const parseTree = try parser.parse(allocator);
+        if (parseTree) |cst| try stdout.print("{f}\n", .{cst.format(0)});
+
+        if (parser.getErrors()) |errors| try this.reportErrors(errors);
     }
 };
 

@@ -27,22 +27,54 @@ pub const Stmt = union(enum) {
     block: Box(Block),
 
     pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
-        return switch ((parser.tokens.peek() orelse return null).tag) {
+        const lookahead = try parser.checkOrHandleError(allocator, .{
+            .@"for",
+            .@"if",
+            .print,
+            .@"return",
+            .@"while",
+            .@"{",
+            .true,
+            .false,
+            .nil,
+            .this,
+            .number,
+            .string,
+            .identifier,
+            .@"(",
+            .proto,
+            .@"!",
+            .@"-",
+        }) orelse return null;
+
+        return switch (lookahead.tag) {
             .@"for" => .{ .for_stmt = try .init(allocator, try ForStmt.parse(parser, allocator) orelse return null) },
             .@"if" => .{ .if_stmt = try .init(allocator, try IfStmt.parse(parser, allocator) orelse return null) },
             .print => .{ .print_stmt = try .init(allocator, try PrintStmt.parse(parser, allocator) orelse return null) },
             .@"return" => .{ .return_stmt = try .init(allocator, try ReturnStmt.parse(parser, allocator) orelse return null) },
             .@"while" => .{ .while_stmt = try .init(allocator, try WhileStmt.parse(parser, allocator) orelse return null) },
             .@"{" => .{ .block = try .init(allocator, try Block.parse(parser, allocator) orelse return null) },
-            else => .{ .expr_stmt = try .init(allocator, try ExprStmt.parse(parser, allocator) orelse return null) },
+            .true,
+            .false,
+            .nil,
+            .this,
+            .number,
+            .string,
+            .identifier,
+            .@"(",
+            .proto,
+            .@"!",
+            .@"-",
+            => .{ .expr_stmt = try .init(allocator, try ExprStmt.parse(parser, allocator) orelse return null) },
+            else => null,
         };
     }
 
-    pub fn deinit(this: @This(), allocator: Allocator) void {
-        switch (this) {
-            inline else => |stmt| {
-                stmt.deinit();
-                allocator.free(stmt);
+    pub fn deinit(this: *@This(), allocator: Allocator) void {
+        switch (this.*) {
+            inline else => |box| {
+                box.value.deinit(allocator);
+                box.deinit(allocator);
             },
         }
     }

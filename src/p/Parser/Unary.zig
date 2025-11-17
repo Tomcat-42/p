@@ -17,10 +17,23 @@ pub const Unary = union(enum) {
     call: Call,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch ((parser.tokens.peek() orelse return null).tag) {
-            .@"-", .@"!" => .{ .unary_expr = try .init(allocator,try UnaryExpr.parse(parser, allocator) orelse return null) },
-            else => .{ .call = try Call.parse(parser, allocator) orelse return null },
+        const lookahead = parser.tokens.peek() orelse return null;
+
+        return switch (lookahead.tag) {
+            .@"-", .@"!" => .{ .unary_expr = try .init(allocator, try UnaryExpr.parse(parser, allocator) orelse return null) },
+            .true, .false, .nil, .this, .number, .string, .identifier, .@"(", .proto => .{ .call = try Call.parse(parser, allocator) orelse return null },
+            else => null,
         };
+    }
+
+    pub fn deinit(this: *@This(), allocator: Allocator) void {
+        switch (this.*) {
+            .unary_expr => |box| {
+                box.value.deinit(allocator);
+                box.deinit(allocator);
+            },
+            .call => |call| call.deinit(allocator),
+        }
     }
 
     pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitUnary)).@"fn".return_type.? {

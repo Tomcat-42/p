@@ -20,6 +20,10 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     return .{ .@"else" = @"else", .stmt = stmt };
 }
 
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.stmt.deinit(allocator);
+}
+
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitIfElseBranch)).@"fn".return_type.? {
     return visitor.visitIfElseBranch(this);
 }

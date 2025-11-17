@@ -19,6 +19,8 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     return .{ .extends = extends, .id = id };
 }
 
+pub fn deinit(_: *@This(), _: Allocator) void {}
+
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitObjDeclExtends)).@"fn".return_type.?  {
     visitor.visitObjDeclExtends(this);
 }

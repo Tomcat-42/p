@@ -25,9 +25,15 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
 
     var params: ArrayList(FnParam) = .empty;
-    defer params.deinit(allocator);
-    while (try FnParam.parse(parser, allocator)) |param|
-        try params.append(allocator, param);
+    errdefer params.deinit(allocator);
+
+    while (parser.tokens.peek()) |token| switch (token.tag) {
+        .identifier => try params.append(
+            allocator,
+            try FnParam.parse(parser, allocator) orelse return null,
+        ),
+        else => break,
+    };
 
     const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
     const body = try Block.parse(parser, allocator) orelse return null;
@@ -40,6 +46,10 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
         .@")" = @")",
         .body = body,
     };
+}
+
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    allocator.free(this.params);
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitFnDecl)).@"fn".return_type.? {

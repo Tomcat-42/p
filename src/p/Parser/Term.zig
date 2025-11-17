@@ -18,9 +18,12 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const first = try Factor.parse(parser, allocator) orelse return null;
 
     var suffixes: ArrayList(TermExpr) = .empty;
-    defer suffixes.deinit(allocator);
-    while (try TermExpr.parse(parser, allocator)) |suffix|
-        try suffixes.append(allocator, suffix);
+    errdefer suffixes.deinit(allocator);
+
+    while (parser.tokens.peek()) |token| switch (token.tag) {
+        .@"-", .@"+" => try suffixes.append(allocator, try TermExpr.parse(parser, allocator) orelse return null),
+        else => break,
+    };
 
     return .{
         .first = first,
@@ -28,7 +31,13 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     };
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor)  @typeInfo(@TypeOf(Visitor.visitTerm)).@"fn".return_type.? {
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.first.deinit(allocator);
+    for (this.suffixes) |suffix| suffix.deinit(allocator);
+    allocator.free(this.suffixes);
+}
+
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitTerm)).@"fn".return_type.? {
     return visitor.visitTerm(this);
 }
 

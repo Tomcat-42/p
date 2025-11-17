@@ -13,14 +13,12 @@ const Token = Tokenizer.Token;
 const util = @import("util");
 const color = util.color;
 
-pub const Assign = @import("Parser/Assign.zig").Assign;
+pub const Assign = @import("Parser/Assign.zig");
 pub const Expr = Assign;
 pub const ForCond = Expr;
 pub const ForInc = Expr;
 pub const IfCond = Expr;
 pub const AssignExpr = @import("Parser/AssignExpr.zig");
-pub const AssignTarget = @import("Parser/AssignTarget.zig").AssignTarget;
-pub const AssignTargetProperty = @import("Parser/AssignTargetProperty.zig");
 pub const Block = @import("Parser/Block.zig");
 pub const Call = @import("Parser/Call.zig");
 pub const CallExpr = @import("Parser/CallExpr.zig").CallExpr;
@@ -90,8 +88,6 @@ pub const Visitor = struct {
 
         visitAssign: *const fn (this: *anyopaque, node: *const Assign) ?*anyopaque,
         visitAssignExpr: *const fn (this: *anyopaque, node: *const AssignExpr) ?*anyopaque,
-        visitAssignTarget: *const fn (this: *anyopaque, node: *const AssignTarget) ?*anyopaque,
-        visitAssignTargetProperty: *const fn (this: *anyopaque, node: *const AssignTargetProperty) ?*anyopaque,
         visitLogicOr: *const fn (this: *anyopaque, node: *const LogicOr) ?*anyopaque,
         visitLogicOrExpr: *const fn (this: *anyopaque, node: *const LogicOrExpr) ?*anyopaque,
         visitLogicAnd: *const fn (this: *anyopaque, node: *const LogicAnd) ?*anyopaque,
@@ -178,12 +174,6 @@ pub const Visitor = struct {
     pub fn visitAssignExpr(this: *const @This(), node: *const AssignExpr) ?*anyopaque {
         this.vtable.visitAssignExpr(this.ptr, node);
     }
-    pub fn visitAssignTarget(this: *const @This(), node: *const AssignTarget) ?*anyopaque {
-        this.vtable.visitAssignTarget(this.ptr, node);
-    }
-    pub fn visitAssignTargetProperty(this: *const @This(), node: *const AssignTargetProperty) ?*anyopaque {
-        this.vtable.visitAssignTargetProperty(this.ptr, node);
-    }
     pub fn visitLogicOr(this: *const @This(), node: *const LogicOr) ?*anyopaque {
         this.vtable.visitLogicOr(this.ptr, node);
     }
@@ -255,6 +245,10 @@ pub const Visitor = struct {
 pub const Error = struct {
     message: []const u8,
     span: Token.Span,
+
+    pub fn deinit(this: *@This(), allocator: Allocator) void {
+        allocator.free(this.message);
+    }
 };
 
 tokens: *Tokenizer,
@@ -265,6 +259,7 @@ pub fn init(tokens: *Tokenizer) @This() {
 }
 
 pub fn deinit(this: *@This(), allocator: Allocator) void {
+    for (this.errors.items) |*err| err.deinit(allocator);
     this.errors.deinit(allocator);
 }
 
@@ -277,7 +272,7 @@ pub fn reset(this: *@This(), allocator: Allocator) void {
     this.errors.clearAndFree(allocator);
 }
 
-pub fn getErrors(this: *@This()) !?[]const Error {
+pub fn getErrors(this: *@This()) ?[]const Error {
     if (this.errors.items.len == 0) return null;
     return this.errors.items;
 }
@@ -288,6 +283,36 @@ pub inline fn expectOrHandleErrorAndSync(this: *@This(), allocator: Allocator, c
 
     // Next token is expected, return gracefully 😄
     if (this.tokens.expect(expected)) |token| return token;
+
+    // 💀
+    const token = this.tokens.peek();
+    try this.errors.append(allocator, .{
+        .message = try fmt.allocPrint(allocator, "Expected {s}, got '{s}'", .{
+            comptime tokens: {
+                var message: []const u8 = "'" ++ @tagName(expected[0]) ++ "'";
+                for (1..@typeInfo(@TypeOf(expected)).@"struct".fields.len) |i| message = message ++ ", '" ++ @tagName(expected[i]) ++ "'";
+                break :tokens message;
+            },
+            if (token) |tok| @tagName(tok.tag) else "Unexpected EOF",
+        }),
+        .span = if (token) |tok| .{
+            .begin = this.tokens.pos + 1,
+            .end = this.tokens.pos + tok.value.len + 1,
+        } else .{
+            .begin = this.tokens.pos,
+            .end = this.tokens.pos,
+        },
+    });
+
+    return this.tokens.sync(expected);
+}
+
+pub inline fn checkOrHandleError(this: *@This(), allocator: Allocator, comptime expected: anytype) !?Token {
+    assert(@typeInfo(@TypeOf(expected)) == .@"struct");
+    assert(@typeInfo(@TypeOf(expected)).@"struct".fields.len >= 1);
+
+    // Next token is expected, return gracefully 😄
+    if (this.tokens.check(expected)) |token| return token;
 
     // 💀
     const token = this.tokens.peek();
@@ -330,7 +355,10 @@ pub fn MakeFormat(T: type) type {
                         else => for (@field(this.data, field.name)) |f| try writer.print("{f}", f.format(depth + 1)),
                     },
                     .optional => if (@field(this.data, field.name)) |f|
-                        try writer.print("{f}", f.format(depth + 1)),
+                        if (comptime mem.find(u8, @typeName(@TypeOf(f)), "Box")) |_|
+                            try writer.print("{f}", @field(f, "value").format(depth + 1))
+                        else
+                            try writer.print("{f}", f.format(depth + 1)),
                     else => if (comptime mem.find(u8, @typeName(field.type), "Box")) |_|
                         try writer.print("{f}", @field(@field(this.data, field.name), "value").format(depth + 1))
                     else

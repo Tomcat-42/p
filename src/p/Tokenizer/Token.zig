@@ -90,33 +90,41 @@ const Format = struct {
         switch (this.token.tag) {
             .number,
             .string,
-            => try writer.print("{s}Token{{.{t} = {s}{s}{s}}}{s}\n", .{
+            => try writer.print("{s}Token{{.{t} = {s}{s}{s}}} <{d}, {d}>{s}\n", .{
                 color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
                 this.token.tag,
                 color.FG.WHITE ++ color.FG.EFFECT.UNDERLINE,
                 this.token.value,
                 color.FG.MAGENTA ++ color.FG.EFFECT.RESET.UNDERLINE,
+                this.token.span.begin, // Added span.begin
+                this.token.span.end, // Added span.end
                 color.RESET,
             }),
-            .identifier => try writer.print("{s}Token{{.{t} = {s}{s}{s}}}{s}\n", .{
+            .identifier => try writer.print("{s}Token{{.{t} = {s}{s}{s}}}<{d},{d}>{s}\n", .{
                 color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
                 this.token.tag,
                 color.FG.WHITE ++ color.FG.EFFECT.UNDERLINE,
                 this.token.value,
                 color.RESET ++ color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
+                this.token.span.begin, // Added span.begin
+                this.token.span.end, // Added span.end
                 color.RESET,
             }),
-            .comment => try writer.print("{s}Token{{.{t} = {s}{s}{s}}}{s}\n", .{
+            .comment => try writer.print("{s}Token{{.{t} = {s}{s}{s}}}<{d},{d}>{s}\n", .{
                 color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
                 this.token.tag,
                 color.FG.GREEN ++ color.FG.EFFECT.UNDERLINE,
                 this.token.value,
                 color.RESET ++ color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
+                this.token.span.begin, // Added span.begin
+                this.token.span.end, // Added span.end
                 color.RESET,
             }),
-            else => try writer.print("{s}Token.{t}{s}\n", .{
+            else => try writer.print("{s}Token.{t}<{d},{d}>{s}\n", .{
                 color.FG.MAGENTA ++ color.FG.EFFECT.ITALIC,
                 this.token.tag,
+                this.token.span.begin, // Added span.begin
+                this.token.span.end, // Added span.end
                 color.RESET,
             }),
         }

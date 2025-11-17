@@ -7,25 +7,34 @@ const ArrayList = std.ArrayList;
 const p = @import("p");
 const Parser = p.Parser;
 const Term = Parser.Term;
-const ComparisonSuffix = Parser.ComparisonExpr;
+const ComparisonExpr = Parser.ComparisonExpr;
 const Visitor = Parser.Visitor;
 const MakeFormat = Parser.MakeFormat;
 
 first: Term,
-suffixes: []const ComparisonSuffix,
+suffixes: []const ComparisonExpr,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const first = try Term.parse(parser, allocator) orelse return null;
 
-    var suffixes: ArrayList(ComparisonSuffix) = .empty;
-    defer suffixes.deinit(allocator);
-    while (try ComparisonSuffix.parse(parser, allocator)) |suffix|
-        try suffixes.append(allocator, suffix);
+    var suffixes: ArrayList(ComparisonExpr) = .empty;
+    errdefer suffixes.deinit(allocator);
+
+    while (parser.tokens.peek()) |token| switch (token.tag) {
+        .@">", .@">=", .@"<", .@"<=" => try suffixes.append(allocator, try ComparisonExpr.parse(parser, allocator) orelse return null),
+        else => break,
+    };
 
     return .{
         .first = first,
         .suffixes = try suffixes.toOwnedSlice(allocator),
     };
+}
+
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.first.deinit(allocator);
+    for (this.suffixes) |suffix| suffix.deinit(allocator);
+    allocator.free(this.suffixes);
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitComparison)).@"fn".return_type.? {

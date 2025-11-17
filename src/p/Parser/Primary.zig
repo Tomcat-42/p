@@ -23,7 +23,9 @@ pub const Primary = union(enum) {
     proto_access: PrimaryProtoAccess,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch ((parser.tokens.peek() orelse return null).tag) {
+        const lookahead = parser.tokens.peek() orelse return null;
+
+        return switch (lookahead.tag) {
             .true => .{ .true = parser.tokens.next().? },
             .false => .{ .false = parser.tokens.next().? },
             .nil => .{ .nil = parser.tokens.next().? },
@@ -33,8 +35,16 @@ pub const Primary = union(enum) {
             .identifier => .{ .id = parser.tokens.next().? },
             .@"(" => .{ .group_expr = try PrimaryGroupExpr.parse(parser, allocator) orelse return null },
             .proto => .{ .proto_access = try PrimaryProtoAccess.parse(parser, allocator) orelse return null },
-            else => return null,
+            else => null,
         };
+    }
+
+    pub fn deinit(this: *@This(), allocator: Allocator) void {
+        switch (this.*) {
+            .group_expr => |*group_expr| group_expr.deinit(allocator),
+            .proto_access => |*proto_access| proto_access.deinit(allocator),
+            else => {},
+        }
     }
 
     pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitPrimary)).@"fn".return_type.?  {

@@ -21,6 +21,8 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     return .{ .proto = proto, .@"." = @".", .id = id };
 }
 
+pub fn deinit(_: *@This(), _: Allocator) void {}
+
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitProtoAccess)).@"fn".return_type.?  {
     return visitor.visitProtoAccess(this);
 }

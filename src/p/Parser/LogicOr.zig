@@ -7,25 +7,34 @@ const ArrayList = std.ArrayList;
 const p = @import("p");
 const Parser = p.Parser;
 const LogicAnd = Parser.LogicAnd;
-const LogicOrSuffix = Parser.LogicOrExpr;
+const LogicOrExpr = Parser.LogicOrExpr;
 const Visitor = Parser.Visitor;
 const MakeFormat = Parser.MakeFormat;
 
 first: LogicAnd,
-suffixes: []const LogicOrSuffix,
+suffixes: []LogicOrExpr,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const first = try LogicAnd.parse(parser, allocator) orelse return null;
 
-    var suffixes: ArrayList(LogicOrSuffix) = .empty;
-    defer suffixes.deinit(allocator);
-    while (try LogicOrSuffix.parse(parser, allocator)) |suffix|
-        try suffixes.append(allocator, suffix);
+    var suffixes: ArrayList(LogicOrExpr) = .empty;
+    errdefer suffixes.deinit(allocator);
+
+    while (parser.tokens.peek()) |token| switch (token.tag) {
+        .@"or" => try suffixes.append(allocator, try LogicOrExpr.parse(parser, allocator) orelse return null),
+        else => break,
+    };
 
     return .{
         .first = first,
         .suffixes = try suffixes.toOwnedSlice(allocator),
     };
+}
+
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.first.deinit(allocator);
+    for (this.suffixes) |suffix| suffix.deinit(allocator);
+    allocator.free(this.suffixes);
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitLogicOr)).@"fn".return_type.? {

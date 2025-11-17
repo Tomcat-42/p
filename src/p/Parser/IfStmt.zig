@@ -25,7 +25,13 @@ pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     const cond = try IfCond.parse(parser, allocator) orelse return null;
     const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
     const main_branch = try IfMainBranch.parse(parser, allocator) orelse return null;
-    const else_branch = try IfElseBranch.parse(parser, allocator);
+    const else_branch: ?IfElseBranch = else_branch: {
+        const lookahead = parser.tokens.peek() orelse break :else_branch null;
+        break :else_branch switch (lookahead.tag) {
+            .@"else" => try IfElseBranch.parse(parser, allocator),
+            else => null,
+        };
+    };
 
     return .{
         .@"if" = @"if",
@@ -35,6 +41,12 @@ pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
         .main_branch = main_branch,
         .else_branch = else_branch,
     };
+}
+
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.cond.deinit(allocator);
+    this.main_branch.deinit(allocator);
+    if (this.else_branch) |*branch| branch.deinit(allocator);
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitIfStmt)).@"fn".return_type.? {

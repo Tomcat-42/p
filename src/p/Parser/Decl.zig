@@ -19,12 +19,38 @@ pub const Decl = union(enum) {
     Stmt: Stmt,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        return switch (try parser.tokens.peek() orelse return null) {
+        const lookahead = parser.tokens.peek() orelse return null;
+
+        return switch (lookahead.tag) {
             .object => .{ .ObjDecl = try ObjDecl.parse(parser, allocator) orelse return null },
             .@"fn" => .{ .FnDecl = try FnDecl.parse(parser, allocator) orelse return null },
             .let => .{ .VarDecl = try VarDecl.parse(parser, allocator) orelse return null },
-            else => .{ .Stmt = try Stmt.parse(parser, allocator) orelse return null },
+            .true,
+            .false,
+            .nil,
+            .this,
+            .number,
+            .string,
+            .identifier,
+            .@"(",
+            .proto,
+            .@"!",
+            .@"-",
+            .@"for",
+            .@"if",
+            .print,
+            .@"return",
+            .@"while",
+            .@"{",
+            => .{ .Stmt = try Stmt.parse(parser, allocator) orelse return null },
+            else => null,
         };
+    }
+
+    pub fn deinit(this: *@This(), allocator: Allocator) void {
+        switch (this.*) {
+            inline else => |decl| decl.deinit(allocator, decl),
+        }
     }
 
     pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitDecl)).@"fn".return_type.? {

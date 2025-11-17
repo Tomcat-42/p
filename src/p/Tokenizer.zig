@@ -57,6 +57,7 @@ pub fn next(this: *@This()) ?Token {
     };
 }
 
+/// Peek at the next token without consuming it.
 pub fn peek(this: *@This()) ?Token {
     const old = this.pos;
     defer this.pos = old;
@@ -64,12 +65,26 @@ pub fn peek(this: *@This()) ?Token {
     return this.next();
 }
 
+/// If the next token matches one of the expected tags, consume and return it.
 pub fn expect(this: *@This(), comptime expected: anytype) ?Token {
     assert(@typeInfo(@TypeOf(expected)) == .@"struct");
 
     const tok = this.peek() orelse return null;
     inline for (expected) |e| switch (tok.tag) {
         e => return this.next(),
+        else => {},
+    };
+
+    return null;
+}
+
+/// Check if the next token matches one of the expected types without consuming it.
+pub fn check(this: *@This(), comptime expected: anytype) ?Token {
+    assert(@typeInfo(@TypeOf(expected)) == .@"struct");
+
+    const tok = this.peek() orelse return null;
+    inline for (expected) |e| switch (tok.tag) {
+        e => return tok,
         else => {},
     };
 

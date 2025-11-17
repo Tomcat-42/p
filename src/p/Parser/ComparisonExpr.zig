@@ -20,6 +20,10 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     return .{ .op = op, .term = term };
 }
 
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.term.deinit(allocator);
+}
+
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitComparisonSuffix)).@"fn".return_type.? {
     return visitor.visitComparisonSuffix(this);
 }

@@ -22,6 +22,10 @@ pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     return .{ .@"(" = @"(", .expr = expr, .@")" = @")" };
 }
 
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.expr.deinit(allocator);
+}
+
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitGroupExpr)).@"fn".return_type.? {
     return visitor.visitGroupExpr(this);
 }

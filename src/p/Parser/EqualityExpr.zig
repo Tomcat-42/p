@@ -14,10 +14,14 @@ op: Token,
 comparison: Comparison,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const op = try parser.expectOrHandleErrorAndSync(allocator, .{.@"==", .@"!="}) orelse return null;
+    const op = try parser.expectOrHandleErrorAndSync(allocator, .{ .@"==", .@"!=" }) orelse return null;
     const comparison = try Comparison.parse(parser, allocator) orelse return null;
 
     return .{ .op = op, .comparison = comparison };
+}
+
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.comparison.deinit(allocator);
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitEqualitySuffix)).@"fn".return_type.? {

@@ -10,7 +10,7 @@ const MakeFormat = Parser.MakeFormat;
 const Token = p.Tokenizer.Token;
 
 id: Token,
-@",": Token,
+@",": ?Token,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const id = try parser.expectOrHandleErrorAndSync(

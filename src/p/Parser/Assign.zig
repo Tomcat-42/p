@@ -12,25 +12,33 @@ const MakeFormat = Parser.MakeFormat;
 const util = @import("util");
 const Box = util.Box;
 
-pub const Assign = union(enum) {
-    assign_expr: Box(AssignExpr),
-    logic_or: Box(LogicOr),
+logic_or: Box(LogicOr),
+assign_expr: ?Box(AssignExpr) = null,
 
-    pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
-        if (try AssignExpr.parse(parser, allocator)) |expr|
-            return .{ .assign_expr = try .init(allocator, expr) };
+pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
+    const logic_or: Box(LogicOr) = try .init(allocator, try LogicOr.parse(parser, allocator) orelse return null);
+    const assign_expr: ?Box(AssignExpr) = assign: {
+        const lookahead = parser.tokens.peek() orelse break :assign null;
+        break :assign switch (lookahead.tag) {
+            .@"=" => try .init(allocator, try AssignExpr.parse(parser, allocator) orelse return null),
+            else => null,
+        };
+    };
 
-        const logic_or = try LogicOr.parse(parser, allocator) orelse return null;
-        return .{ .logic_or = try .init(allocator, logic_or) };
-    }
+    return .{ .logic_or = logic_or, .assign_expr = assign_expr };
+}
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitAssign)).@"fn".return_type.? {
-        return visitor.visitAssign(this);
-    }
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.logic_or.deinit(allocator);
+    if (this.assign_expr) |*assign_expr| assign_expr.deinit(allocator);
+}
 
-    pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
-        return .{ .data = .{ .depth = depth, .data = this } };
-    }
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitAssign)).@"fn".return_type.? {
+    return visitor.visitAssign(this);
+}
 
-    const Format = MakeFormat(@This());
-};
+pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
+    return .{ .data = .{ .depth = depth, .data = this } };
+}
+
+const Format = MakeFormat(@This());

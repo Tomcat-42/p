@@ -7,20 +7,23 @@ const ArrayList = std.ArrayList;
 const p = @import("p");
 const Parser = p.Parser;
 const Unary = Parser.Unary;
-const FactorSuffix = Parser.FactorExpr;
+const FactorExpr = Parser.FactorExpr;
 const Visitor = Parser.Visitor;
 const MakeFormat = Parser.MakeFormat;
 
 first: Unary,
-suffixes: []const FactorSuffix,
+suffixes: []const FactorExpr,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const first = try Unary.parse(parser, allocator) orelse return null;
 
-    var suffixes: ArrayList(FactorSuffix) = .empty;
-    defer suffixes.deinit(allocator);
-    while (try FactorSuffix.parse(parser, allocator)) |suffix|
-        try suffixes.append(allocator, suffix);
+    var suffixes: ArrayList(FactorExpr) = .empty;
+    errdefer suffixes.deinit(allocator);
+
+    while (parser.tokens.peek()) |token| switch (token.tag) {
+        .@"/", .@"*" => try suffixes.append(allocator, try FactorExpr.parse(parser, allocator) orelse return null),
+        else => break,
+    };
 
     return .{
         .first = first,
@@ -28,7 +31,13 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     };
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitFactor)).@"fn".return_type.?{
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.first.deinit(allocator);
+    for (this.suffixes) |suffix| suffix.deinit(allocator);
+    allocator.free(this.suffixes);
+}
+
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitFactor)).@"fn".return_type.? {
     return visitor.visitFactor(this);
 }
 

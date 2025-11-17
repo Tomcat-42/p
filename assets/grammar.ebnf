@@ -15,7 +15,7 @@ Stmt           = ExprStmt | ForStmt | IfStmt | PrintStmt | ReturnStmt | WhileStm
 
 ExprStmt       = Expr, ";";
 
-ForStmt        = "for", "(", [ ForInit ], ";", [ ForCond ], ";", [ ForIncr ], ")", Stmt;
+ForStmt        = "for", "(", [ ForInit ], [ ForCond ], ";", [ ForIncr ], ")", Stmt;
 ForInit        = VarDecl | ExprStmt;
 ForCond        = Expr;
 ForIncr        = Expr;
@@ -32,37 +32,35 @@ Block          = "{", { Decl }, "}";
 
 Expr           = Assign;
 
-Assign         = AssignExpr | LogicOr;
-AssignExpr     = AssignTarget, "=", Assign;
-AssignTarget   = AssignTargetProperty | ID;
-AssignTargetProperty = Call, ".", ID;
+Assign         = LogicOr, [ AssignExpr ];
+AssignExpr     = "=", Assign;
 
 LogicOr        = LogicAnd, { LogicOrExpr };
-LogicOrExpr  = "or", LogicAnd;
+LogicOrExpr    = "or", LogicAnd;
 
 LogicAnd       = Equality, { LogicAndExpr };
-LogicAndExpr = "and", Equality;
+LogicAndExpr   = "and", Equality;
 
 Equality       = Comparison, { EqualityExpr };
-EqualityExpr = "!=" | "==", Comparison;
+EqualityExpr   = "!=" | "==", Comparison;
 
 Comparison     = Term, { ComparisonExpr };
 ComparisonExpr = ">" | ">=" | "<" | "<=", Term;
 
 Term           = Factor, { TermExpr };
-TermExpr     = "-" | "+", Factor;
+TermExpr       = "-" | "+", Factor;
 
 Factor         = Unary, { FactorExpr };
-FactorExpr   = "/" | "*", Unary;
+FactorExpr     = "/" | "*", Unary;
 
 Unary          = UnaryExpr | Call;
 UnaryExpr      = "!" | "-", Unary;
 
 Call          = Primary, { CallExpr };
-CallExpr    = CallFn | CallProperty;
-CallFn         = "(", { FnArg }, ")";
+CallExpr      = CallFn | CallProperty;
+CallFn        = "(", { FnArg }, ")";
 CallProperty  = ".", ID;
-FnArg          = Expr, [ "," ];
+FnArg         = Expr, [ "," ];
 
 Primary        = "true"
                | "false"

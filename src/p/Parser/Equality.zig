@@ -18,14 +18,23 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const first = try Comparison.parse(parser, allocator) orelse return null;
 
     var suffixes: ArrayList(EqualityExpr) = .empty;
-    defer suffixes.deinit(allocator);
-    while (try EqualityExpr.parse(parser, allocator)) |suffix|
-        try suffixes.append(allocator, suffix);
+    errdefer suffixes.deinit(allocator);
+
+    while (parser.tokens.peek()) |token| switch (token.tag) {
+        .@"==", .@"!=" => try suffixes.append(allocator, try EqualityExpr.parse(parser, allocator) orelse return null),
+        else => break,
+    };
 
     return .{
         .first = first,
         .suffixes = try suffixes.toOwnedSlice(allocator),
     };
+}
+
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.first.deinit(allocator);
+    for (this.suffixes) |suffix| suffix.deinit(allocator);
+    allocator.free(this.suffixes);
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitEquality)).@"fn".return_type.? {

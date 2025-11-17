@@ -33,6 +33,11 @@ pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     };
 }
 
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.cond.deinit(allocator);
+    this.body.deinit(allocator);
+}
+
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitWhileStmt)).@"fn".return_type.? {
     return visitor.visitWhileStmt(this);
 }

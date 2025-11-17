@@ -20,6 +20,10 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     return .{ .op = op, .logic_and = logic_and };
 }
 
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.logic_and.deinit(allocator);
+}
+
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitLogicOrExpr)).@"fn".return_type.?  {
     return visitor.visitLogicOrExpr(this);
 }

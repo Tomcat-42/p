@@ -18,14 +18,23 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const first = try Equality.parse(parser, allocator) orelse return null;
 
     var suffixes: ArrayList(LogicAndExpr) = .empty;
-    defer suffixes.deinit(allocator);
-    while (try LogicAndExpr.parse(parser, allocator)) |suffix|
-        try suffixes.append(allocator, suffix);
+    errdefer suffixes.deinit(allocator);
+
+    while (parser.tokens.peek()) |token| switch (token.tag) {
+        .@"and" => try suffixes.append(allocator, try LogicAndExpr.parse(parser, allocator) orelse return null),
+        else => break,
+    };
 
     return .{
         .first = first,
         .suffixes = try suffixes.toOwnedSlice(allocator),
     };
+}
+
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.first.deinit(allocator);
+    for (this.suffixes) |suffix| suffix.deinit(allocator);
+    allocator.free(this.suffixes);
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitLogicAnd)).@"fn".return_type.? {

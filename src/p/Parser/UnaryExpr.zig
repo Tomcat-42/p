@@ -21,6 +21,10 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     return .{ .op = op, .call = .{ .call = call } };
 }
 
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    this.call.deinit(allocator);
+}
+
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitUnaryExpr)).@"fn".return_type.? {
     return visitor.visitUnaryExpr(this);
 }

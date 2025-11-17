@@ -16,19 +16,18 @@ const Token = p.Tokenizer.Token;
 @"for": Token,
 @"(": Token,
 init: ?ForInit,
-@";": Token,
 cond: ?ForCond,
 @";'": Token,
 inc: ?ForInc,
 @")": Token,
 body: Block,
 
+// TODO: Fix this shit
 pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     const @"for" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"for"}) orelse return null;
     const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
 
-    const initv = try ForInit.parse(parser, allocator);
-    const @";" = try parser.expectOrHandleErrorAndSync(allocator, .{.@";"}) orelse return null;
+    const ini = try ForInit.parse(parser, allocator);
 
     const cond = try ForCond.parse(parser, allocator);
     const @";'" = try parser.expectOrHandleErrorAndSync(allocator, .{.@";"}) orelse return null;
@@ -40,14 +39,20 @@ pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     return .{
         .@"for" = @"for",
         .@"(" = @"(",
-        .init = initv,
-        .@";" = @";",
+        .init = ini,
         .cond = cond,
         .@";'" = @";'",
         .inc = inc,
         .@")" = @")",
         .body = body,
     };
+}
+
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    if (this.init) |*init| init.deinit(allocator);
+    if (this.cond) |*cond| cond.deinit(allocator);
+    if (this.inc) |*inc| inc.deinit(allocator);
+    this.body.deinit(allocator);
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitForStmt)).@"fn".return_type.? {

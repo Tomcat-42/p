@@ -19,6 +19,8 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     return .{ .@"." = @".", .id = id };
 }
 
+pub fn deinit(_: *@This(), _: Allocator) void {}
+
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitCallProperty)).@"fn".return_type.? {
     return visitor.visitCallProperty(this);
 }

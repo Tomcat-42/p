@@ -33,6 +33,11 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     };
 }
 
+pub fn deinit(this: *@This(), allocator: Allocator) void {
+    if (this.extends) |*extends| extends.deinit(allocator);
+    this.body.deinit(allocator);
+}
+
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitObjDecl)).@"fn".return_type.? {
     return visitor.visitObjDecl(this);
 }
