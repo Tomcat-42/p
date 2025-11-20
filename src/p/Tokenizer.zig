@@ -36,16 +36,12 @@ pub fn next(this: *@This()) ?Token {
         '-' => this.token(.@"-"),
         '+' => this.token(.@"+"),
         ';' => this.token(.@";"),
-        '/' => if (this.nextChar()) |char| switch (char) {
-            '*' => this.commentMulti(),
-            '/' => this.commentSingle(),
-            else => this.token(.@"/"),
-        } else this.token(.@"/"),
+        '/' => if (this.check('*')) this.commentMulti() else if (this.check('/')) this.commentSingle() else this.token(.@"/"),
         '*' => this.token(.@"*"),
-        '!' => if (this.nextChar() != null and this.nextChar().? == '=') this.token(.@"!=") else this.token(.@"!"),
-        '=' => if (this.nextChar() != null and this.nextChar().? == '=') this.token(.@"==") else this.token(.@"="),
-        '>' => if (this.nextChar() != null and this.nextChar().? == '=') this.token(.@">=") else this.token(.@">"),
-        '<' => if (this.nextChar() != null and this.nextChar().? == '=') this.token(.@"<=") else this.token(.@"<"),
+        '!' => if (this.check('=')) this.token(.@"!=") else this.token(.@"!"),
+        '=' => if (this.check('=')) this.token(.@"==") else this.token(.@"="),
+        '>' => if (this.check('=')) this.token(.@">=") else this.token(.@">"),
+        '<' => if (this.check('=')) this.token(.@"<=") else this.token(.@"<"),
         '"' => this.string(),
         '0'...'9' => this.number(),
         '_', 'a'...'z', 'A'...'Z' => this.keywordOrIdentifier(),
@@ -65,49 +61,42 @@ pub fn peek(this: *@This()) ?Token {
     return this.next();
 }
 
-/// If the next token matches one of the expected tags, consume and return it.
-pub fn expect(this: *@This(), comptime expected: anytype) ?Token {
+/// If the next token matches one of the expected tags, peek/consume and return it.
+pub fn match(this: *@This(), comptime behaviour: enum { peek, consume }, comptime expected: anytype) ?Token {
     assert(@typeInfo(@TypeOf(expected)) == .@"struct");
 
-    const tok = this.peek() orelse return null;
-    inline for (expected) |e| switch (tok.tag) {
-        e => return this.next(),
-        else => {},
+    const t = this.peek() orelse return null;
+    inline for (expected) |e| if (t.tag == e) return switch (behaviour) {
+        .consume => this.next(),
+        .peek => t,
     };
 
     return null;
 }
 
-/// Check if the next token matches one of the expected types without consuming it.
-pub fn check(this: *@This(), comptime expected: anytype) ?Token {
-    assert(@typeInfo(@TypeOf(expected)) == .@"struct");
-
-    const tok = this.peek() orelse return null;
-    inline for (expected) |e| switch (tok.tag) {
-        e => return tok,
-        else => {},
-    };
-
-    return null;
-}
-
-pub fn sync(this: *@This(), expected: anytype) ?Token {
-    return token: while (this.peek()) |_| {
-        if (this.expect(expected)) |t| break :token t;
-        _ = this.next();
+pub fn sync(this: *@This(), comptime behaviour: @typeInfo(@TypeOf(match)).@"fn".params[1].type.?, expected: anytype) ?Token {
+    return while (this.next()) |t| {
+        if (this.match(.peek, expected) != null)
+            break switch (behaviour) {
+                .consume => this.next(),
+                .peek => t,
+            };
     } else null;
 }
 
 pub fn collect(this: *@This(), allocator: Allocator) ![]const Token {
-    var tokens = try ArrayList(Token).initCapacity(allocator, 1024);
+    var tokens: ArrayList(Token) = .empty;
     errdefer tokens.deinit(allocator);
 
-    while (this.next()) |tok| try tokens.append(allocator, tok);
+    try tokens.ensureTotalCapacity(allocator, this.src.len); // Worst case: every char is a token
+    while (this.next()) |tok| tokens.appendAssumeCapacity(tok);
+
     return tokens.toOwnedSlice(allocator);
 }
 
 fn token(this: *const @This(), comptime tag: Token.Tag) Token {
     const size = @tagName(tag).len;
+
     return .{
         .tag = tag,
         .value = this.src[this.pos .. this.pos + size],
@@ -118,8 +107,8 @@ fn token(this: *const @This(), comptime tag: Token.Tag) Token {
     };
 }
 
-fn nextChar(this: *@This()) ?u8 {
-    return if (this.pos + 1 >= this.src.len) return null else this.src[this.pos + 1];
+fn check(this: *@This(), char: u8) bool {
+    return this.pos + 1 < this.src.len and this.src[this.pos + 1] == char;
 }
 
 fn number(this: *@This()) Token {
@@ -177,17 +166,14 @@ fn keywordOrIdentifier(this: *@This()) Token {
 }
 
 fn skipWhitespace(this: *@This()) void {
-    while (this.pos < this.src.len and
-        ascii.isWhitespace(this.src[this.pos])) : (this.pos += 1)
-    {}
+    while (this.pos < this.src.len and ascii.isWhitespace(this.src[this.pos])) : (this.pos += 1) {}
 }
 
 fn commentSingle(this: *@This()) ?Token {
     const begin = this.pos;
-
     while (this.pos < this.src.len and this.src[this.pos] != '\n') : (this.pos += 1) {}
-
     const end = this.pos;
+
     return .{
         .tag = .comment,
         .value = this.src[begin..end],
@@ -214,7 +200,7 @@ fn commentMulti(this: *@This()) ?Token {
     return null;
 }
 
-const KEYWORDS = StaticStringMap(Token.Tag).initComptime(.{
+const KEYWORDS: StaticStringMap(Token.Tag) = .initComptime(.{
     .{ "and", .@"and" },
     .{ "object", .object },
     .{ "else", .@"else" },

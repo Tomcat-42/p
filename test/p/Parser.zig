@@ -26,7 +26,7 @@ fn assertCorrectParsing(T: type, src: []const u8, expected: ?T) !void {
     std.debug.print("\n", .{});
 
     try expectEqualDeep(expected, actual);
-    try expectEqualDeep(null, parser.getErrors());
+    try expectEqualDeep(null, parser.errs());
 }
 
 test FnDecl {
@@ -62,7 +62,7 @@ test FnDecl {
                     .value = "{",
                     .span = .{ .begin = 9, .end = 10 },
                 },
-                .stmts = &.{},
+                .program = .{ .decls = &.{} },
                 .@"}" = .{
                     .tag = .@"}",
                     .value = "}",
@@ -96,7 +96,7 @@ test ObjDecl {
                     .value = "{",
                     .span = .{ .begin = 9, .end = 10 },
                 },
-                .stmts = &.{},
+                .program = .{ .decls = &.{} },
                 .@"}" = .{
                     .tag = .@"}",
                     .value = "}",
@@ -139,7 +139,7 @@ test ObjDecl {
                     .value = "{",
                     .span = .{ .begin = 19, .end = 20 },
                 },
-                .stmts = &.{},
+                .program = .{ .decls = &.{} },
                 .@"}" = .{
                     .tag = .@"}",
                     .value = "}",
@@ -151,10 +151,7 @@ test ObjDecl {
 }
 
 test Call {
-    try assertCorrectParsing(
-        Call,
+    try assertCorrectParsing(Call,
         \\proto()
-    ,
-    null
-    );
+    , null);
 }

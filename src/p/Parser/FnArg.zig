@@ -7,7 +7,7 @@ const p = @import("p");
 const Parser = p.Parser;
 const Expr = Parser.Expr;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 expr: Expr,
@@ -15,7 +15,7 @@ expr: Expr,
 
 pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     const expr = try Expr.parse(parser, allocator) orelse return null;
-    const @"," = parser.tokens.expect(.{.@","});
+    const @"," = parser.tokens.match(.consume, .{.@","});
 
     return .{ .expr = expr, .@"," = @"," };
 }

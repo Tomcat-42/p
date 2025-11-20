@@ -7,14 +7,14 @@ const p = @import("p");
 const Parser = p.Parser;
 const Term = Parser.Term;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 op: Token,
 term: Term,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const op = try parser.expectOrHandleErrorAndSync(allocator, .{ .@">", .@">=", .@"<", .@"<=" }) orelse return null;
+    const op = try parser.match(allocator, .consume, .{ .@">", .@">=", .@"<", .@"<=" }) orelse return null;
     const term = try Term.parse(parser, allocator) orelse return null;
 
     return .{ .op = op, .term = term };

@@ -6,18 +6,19 @@ const Allocator = mem.Allocator;
 const p = @import("p");
 const Parser = p.Parser;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 id: Token,
 @",": ?Token,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const id = try parser.expectOrHandleErrorAndSync(
+    const id = try parser.match(
         allocator,
+        .consume,
         .{.identifier},
     ) orelse return null;
-    const @"," = parser.tokens.expect(.{.@","});
+    const @"," = parser.tokens.match(.consume, .{.@","});
 
     return .{ .id = id, .@"," = @"," };
 }

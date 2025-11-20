@@ -8,7 +8,7 @@ const Parser = p.Parser;
 const Expr = Parser.Expr;
 const Block = Parser.Block;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 @"while": Token,
@@ -18,10 +18,10 @@ cond: Expr,
 body: Block,
 
 pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
-    const @"while" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"while"}) orelse return null;
-    const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
+    const @"while" = try parser.match(allocator, .consume, .{.@"while"}) orelse return null;
+    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
     const cond = try Expr.parse(parser, allocator) orelse return null;
-    const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
+    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
     const body = try Block.parse(parser, allocator) orelse return null;
 
     return .{

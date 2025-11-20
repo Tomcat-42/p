@@ -9,7 +9,7 @@ const Parser = p.Parser;
 const Comparison = Parser.Comparison;
 const EqualityExpr = Parser.EqualityExpr;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 
 first: Comparison,
 suffixes: []const EqualityExpr,

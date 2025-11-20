@@ -1,82 +1,81 @@
-Program        = { Decl };
+Program         = { Decl };
+Decl            = ObjDecl | FnDecl | VarDecl | Stmt;
 
-Decl           = ObjDecl | FnDecl | VarDecl | Stmt;
+ObjDecl         = "object", ID, [ ObjDeclExtends ], Program;
+ObjDeclExtends  = "extends", ID;
 
-ObjDecl        = "object", ID, [ ObjDeclExtends ], Block;
-ObjDeclExtends = "extends", ID;
+FnDecl          = "fn", ID, "(", { FnParam }, ")", Program;
+FnParam          = ID, [ "," ];
 
-FnDecl         = "fn", ID, "(", { FnParam }, ")", Block;
-FnParam         = ID, [ "," ];
+VarDecl         = "let", ID, [ VarDeclInit ], ";";
+VarDeclInit     = "=", Expr;
 
-VarDecl        = "let", ID, [ VarDeclInit ], ";";
-VarDeclInit    = "=", Expr;
+Stmt            = ExprStmt | ForStmt | IfStmt | PrintStmt | ReturnStmt | WhileStmt | Program;
 
-Stmt           = ExprStmt | ForStmt | IfStmt | PrintStmt | ReturnStmt | WhileStmt | Block;
+ExprStmt        = Expr, [";"];
 
-ExprStmt       = Expr, ";";
+ForStmt         = "for", "(", [ ForInit ], [ ForCond ], [ ForIncr ], ")", Stmt;
+ForInit         = VarDecl | ExprStmt | ";";
+ForCond         = ExprStmt | ";";
+ForIncr         = ExprStmt | ";";
 
-ForStmt        = "for", "(", [ ForInit ], [ ForCond ], ";", [ ForIncr ], ")", Stmt;
-ForInit        = VarDecl | ExprStmt;
-ForCond        = Expr;
-ForIncr        = Expr;
+IfStmt          = "if", "(", IfCond, ")", Stmt, [ IfElseBranch ];
+IfCond          = Expr;
+IfMainBranch    = Stmt;
+IfElseBranch    = "else", Stmt;
 
-IfStmt         = "if", "(", IfCond, ")", Stmt, [ IfElseBranch ];
-IfCond         = Expr;
-IfMainBranch   = Stmt;
-IfElseBranch   = "else", Stmt;
+PrintStmt       = "print", "(", Expr, ")", ";";
+ReturnStmt      = "return", [ Expr ], ";";
+WhileStmt       = "while", "(", Expr, ")", Stmt;
+Block           = "{", { Decl }, "}";
 
-PrintStmt      = "print", "(", Expr, ")", ";";
-ReturnStmt     = "return", [ Expr ], ";";
-WhileStmt      = "while", "(", Expr, ")", Stmt;
-Block          = "{", { Decl }, "}";
+Expr            = Assign;
 
-Expr           = Assign;
+Assign          = LogicOr, [ AssignExpr ];
+AssignExpr      = "=", Assign;
 
-Assign         = LogicOr, [ AssignExpr ];
-AssignExpr     = "=", Assign;
+LogicOr         = LogicAnd, { LogicOrExpr };
+LogicOrExpr     = "or", LogicAnd;
 
-LogicOr        = LogicAnd, { LogicOrExpr };
-LogicOrExpr    = "or", LogicAnd;
+LogicAnd        = Equality, { LogicAndExpr };
+LogicAndExpr    = "and", Equality;
 
-LogicAnd       = Equality, { LogicAndExpr };
-LogicAndExpr   = "and", Equality;
+Equality        = Comparison, { EqualityExpr };
+EqualityExpr    = "!=" | "==", Comparison;
 
-Equality       = Comparison, { EqualityExpr };
-EqualityExpr   = "!=" | "==", Comparison;
+Comparison      = Term, { ComparisonExpr };
+ComparisonExpr  = ">" | ">=" | "<" | "<=", Term;
 
-Comparison     = Term, { ComparisonExpr };
-ComparisonExpr = ">" | ">=" | "<" | "<=", Term;
+Term            = Factor, { TermExpr };
+TermExpr        = "-" | "+", Factor;
 
-Term           = Factor, { TermExpr };
-TermExpr       = "-" | "+", Factor;
+Factor          = Unary, { FactorExpr };
+FactorExpr      = "/" | "*", Unary;
 
-Factor         = Unary, { FactorExpr };
-FactorExpr     = "/" | "*", Unary;
+Unary           = UnaryExpr | Call;
+UnaryExpr       = "!" | "-", Unary;
 
-Unary          = UnaryExpr | Call;
-UnaryExpr      = "!" | "-", Unary;
+Call            = Primary, { CallExpr };
+CallExpr        = CallFn | CallProperty;
+CallFn          = "(", { FnArg }, ")";
+CallProperty    = ".", ID;
+FnArg           = Expr, [ "," ];
 
-Call          = Primary, { CallExpr };
-CallExpr      = CallFn | CallProperty;
-CallFn        = "(", { FnArg }, ")";
-CallProperty  = ".", ID;
-FnArg         = Expr, [ "," ];
+Primary         = "true"
+                | "false"
+                | "nil"
+                | "this"
+                | NUMBER
+                | STRING
+                | ID
+                | GroupExpr
+                | ProtoAccess;
 
-Primary        = "true"
-               | "false"
-               | "nil"
-               | "this"
-               | NUMBER
-               | STRING
-               | ID
-               | GroupExpr
-               | ProtoAccess;
+GroupExpr       = "(", Expr, ")";
+ProtoAccessExpr = "proto", ".", ID;
 
-GroupExpr     = "(", Expr, ")";
-ProtoAccessExpr    = "proto", ".", ID;
-
-ALPHA          = "A" .. "Z" | "a" .. "z" | "_";
-DIGIT          = "0" .. "9";
-NUMBER         = DIGIT, { DIGIT }, [ ".", DIGIT, { DIGIT } ];
-STRING         = '"', { ALPHA | DIGIT }, '"';
-ID             = ALPHA, { ALPHA | DIGIT };
+ALPHA           = "A" .. "Z" | "a" .. "z" | "_";
+DIGIT           = "0" .. "9";
+NUMBER          = DIGIT, { DIGIT }, [ ".", DIGIT, { DIGIT } ];
+STRING          = '"', { ALPHA | DIGIT }, '"';
+ID              = ALPHA, { ALPHA | DIGIT };

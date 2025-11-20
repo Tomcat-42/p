@@ -1,6 +1,5 @@
 const std = @import("std");
 const Io = std.Io;
-const testing = std.testing;
 const assert = std.debug.assert;
 const mem = std.mem;
 const fmt = std.fmt;
@@ -10,13 +9,10 @@ const ArrayList = std.ArrayList;
 const p = @import("p");
 const Tokenizer = p.Tokenizer;
 const Token = Tokenizer.Token;
-const util = @import("util");
-const color = util.color;
+const TreeFormatter = p.util.TreeFormatter;
 
 pub const Assign = @import("Parser/Assign.zig");
 pub const Expr = Assign;
-pub const ForCond = Expr;
-pub const ForInc = Expr;
 pub const IfCond = Expr;
 pub const AssignExpr = @import("Parser/AssignExpr.zig");
 pub const Block = @import("Parser/Block.zig");
@@ -35,6 +31,8 @@ pub const FactorExpr = @import("Parser/FactorExpr.zig");
 pub const FnArg = @import("Parser/FnArg.zig");
 pub const FnDecl = @import("Parser/FnDecl.zig");
 pub const FnParam = @import("Parser/FnParam.zig");
+pub const ForCond = @import("Parser/ForCond.zig").ForCond;
+pub const ForInc = @import("Parser/ForInc.zig").ForInc;
 pub const ForInit = @import("Parser/ForInit.zig").ForInit;
 pub const ForStmt = @import("Parser/ForStmt.zig");
 pub const GroupExpr = @import("Parser/GroupExpr.zig");
@@ -79,6 +77,8 @@ pub const Visitor = struct {
         visitExprStmt: *const fn (this: *anyopaque, node: *const ExprStmt) ?*anyopaque,
         visitForStmt: *const fn (this: *anyopaque, node: *const ForStmt) ?*anyopaque,
         visitForInit: *const fn (this: *anyopaque, node: *const ForInit) ?*anyopaque,
+        visitForCond: *const fn (this: *anyopaque, node: *const ForCond) ?*anyopaque,
+        visitForInc: *const fn (this: *anyopaque, node: *const ForInc) ?*anyopaque,
         visitIfStmt: *const fn (this: *anyopaque, node: *const IfStmt) ?*anyopaque,
         visitIfElseBranch: *const fn (this: *anyopaque, node: *const IfElseBranch) ?*anyopaque,
         visitPrintStmt: *const fn (this: *anyopaque, node: *const PrintStmt) ?*anyopaque,
@@ -113,132 +113,138 @@ pub const Visitor = struct {
     };
 
     pub fn visitProgram(this: *const @This(), node: *const Program) ?*anyopaque {
-        this.vtable.visitProgram(this.ptr, node);
+        return this.vtable.visitProgram(this.ptr, node);
     }
     pub fn visitDecl(this: *const @This(), node: *const Decl) ?*anyopaque {
-        this.vtable.visitDecl(this.ptr, node);
+        return this.vtable.visitDecl(this.ptr, node);
     }
     pub fn visitObjDecl(this: *const @This(), node: *const ObjDecl) ?*anyopaque {
-        this.vtable.visitObjDecl(this.ptr, node);
+        return this.vtable.visitObjDecl(this.ptr, node);
     }
     pub fn visitObjDeclExtends(this: *const @This(), node: *const ObjDeclExtends) ?*anyopaque {
-        this.vtable.visitObjDeclExtends(this.ptr, node);
+        return this.vtable.visitObjDeclExtends(this.ptr, node);
     }
     pub fn visitFnDecl(this: *const @This(), node: *const FnDecl) ?*anyopaque {
-        this.vtable.visitFnDecl(this.ptr, node);
+        return this.vtable.visitFnDecl(this.ptr, node);
     }
     pub fn visitFnParam(this: *const @This(), node: *const FnParam) ?*anyopaque {
-        this.vtable.visitFnParam(this.ptr, node);
+        return this.vtable.visitFnParam(this.ptr, node);
     }
     pub fn visitVarDecl(this: *const @This(), node: *const VarDecl) ?*anyopaque {
-        this.vtable.visitVarDecl(this.ptr, node);
+        return this.vtable.visitVarDecl(this.ptr, node);
     }
     pub fn visitVarDeclInit(this: *const @This(), node: *const VarDeclInit) ?*anyopaque {
-        this.vtable.visitVarDeclInit(this.ptr, node);
+        return this.vtable.visitVarDeclInit(this.ptr, node);
     }
 
     pub fn visitStmt(this: *const @This(), node: *const Stmt) ?*anyopaque {
-        this.vtable.visitStmt(this.ptr, node);
+        return this.vtable.visitStmt(this.ptr, node);
     }
     pub fn visitExprStmt(this: *const @This(), node: *const ExprStmt) ?*anyopaque {
-        this.vtable.visitExprStmt(this.ptr, node);
+        return this.vtable.visitExprStmt(this.ptr, node);
     }
     pub fn visitForStmt(this: *const @This(), node: *const ForStmt) ?*anyopaque {
-        this.vtable.visitForStmt(this.ptr, node);
+        return this.vtable.visitForStmt(this.ptr, node);
     }
     pub fn visitForInit(this: *const @This(), node: *const ForInit) ?*anyopaque {
-        this.vtable.visitForInit(this.ptr, node);
+        return this.vtable.visitForInit(this.ptr, node);
+    }
+    pub fn visitForCond(this: *const @This(), node: *const ForCond) ?*anyopaque {
+        return this.vtable.visitForCond(this.ptr, node);
+    }
+    pub fn visitForInc(this: *const @This(), node: *const ForInc) ?*anyopaque {
+        return this.vtable.visitForInc(this.ptr, node);
     }
     pub fn visitIfStmt(this: *const @This(), node: *const IfStmt) ?*anyopaque {
-        this.vtable.visitIfStmt(this.ptr, node);
+        return this.vtable.visitIfStmt(this.ptr, node);
     }
     pub fn visitIfElseBranch(this: *const @This(), node: *const IfElseBranch) ?*anyopaque {
-        this.vtable.visitIfElseBranch(this.ptr, node);
+        return this.vtable.visitIfElseBranch(this.ptr, node);
     }
     pub fn visitPrintStmt(this: *const @This(), node: *const PrintStmt) ?*anyopaque {
-        this.vtable.visitPrintStmt(this.ptr, node);
+        return this.vtable.visitPrintStmt(this.ptr, node);
     }
     pub fn visitReturnStmt(this: *const @This(), node: *const ReturnStmt) ?*anyopaque {
-        this.vtable.visitReturnStmt(this.ptr, node);
+        return this.vtable.visitReturnStmt(this.ptr, node);
     }
     pub fn visitWhileStmt(this: *const @This(), node: *const WhileStmt) ?*anyopaque {
-        this.vtable.visitWhileStmt(this.ptr, node);
+        return this.vtable.visitWhileStmt(this.ptr, node);
     }
     pub fn visitBlock(this: *const @This(), node: *const Block) ?*anyopaque {
-        this.vtable.visitBlock(this.ptr, node);
+        return this.vtable.visitBlock(this.ptr, node);
     }
 
     pub fn visitAssign(this: *const @This(), node: *const Assign) ?*anyopaque {
-        this.vtable.visitAssign(this.ptr, node);
+        return this.vtable.visitAssign(this.ptr, node);
     }
     pub fn visitAssignExpr(this: *const @This(), node: *const AssignExpr) ?*anyopaque {
-        this.vtable.visitAssignExpr(this.ptr, node);
+        return this.vtable.visitAssignExpr(this.ptr, node);
     }
     pub fn visitLogicOr(this: *const @This(), node: *const LogicOr) ?*anyopaque {
-        this.vtable.visitLogicOr(this.ptr, node);
+        return this.vtable.visitLogicOr(this.ptr, node);
     }
     pub fn visitLogicOrExpr(this: *const @This(), node: *const LogicOrExpr) ?*anyopaque {
-        this.vtable.visitLogicOrExpr(this.ptr, node);
+        return this.vtable.visitLogicOrExpr(this.ptr, node);
     }
     pub fn visitLogicAnd(this: *const @This(), node: *const LogicAnd) ?*anyopaque {
-        this.vtable.visitLogicAnd(this.ptr, node);
+        return this.vtable.visitLogicAnd(this.ptr, node);
     }
     pub fn visitLogicAndExpr(this: *const @This(), node: *const LogicAndExpr) ?*anyopaque {
-        this.vtable.visitLogicAndExpr(this.ptr, node);
+        return this.vtable.visitLogicAndExpr(this.ptr, node);
     }
     pub fn visitEquality(this: *const @This(), node: *const Equality) ?*anyopaque {
-        this.vtable.visitEquality(this.ptr, node);
+        return this.vtable.visitEquality(this.ptr, node);
     }
     pub fn visitEqualityExpr(this: *const @This(), node: *const EqualityExpr) ?*anyopaque {
-        this.vtable.visitEqualityExpr(this.ptr, node);
+        return this.vtable.visitEqualityExpr(this.ptr, node);
     }
     pub fn visitComparison(this: *const @This(), node: *const Comparison) ?*anyopaque {
-        this.vtable.visitComparison(this.ptr, node);
+        return this.vtable.visitComparison(this.ptr, node);
     }
     pub fn visitComparisonExpr(this: *const @This(), node: *const ComparisonExpr) ?*anyopaque {
-        this.vtable.visitComparisonExpr(this.ptr, node);
+        return this.vtable.visitComparisonExpr(this.ptr, node);
     }
     pub fn visitTerm(this: *const @This(), node: *const Term) ?*anyopaque {
-        this.vtable.visitTerm(this.ptr, node);
+        return this.vtable.visitTerm(this.ptr, node);
     }
     pub fn visitTermExpr(this: *const @This(), node: *const TermExpr) ?*anyopaque {
-        this.vtable.visitTermExpr(this.ptr, node);
+        return this.vtable.visitTermExpr(this.ptr, node);
     }
     pub fn visitFactor(this: *const @This(), node: *const Factor) ?*anyopaque {
-        this.vtable.visitFactor(this.ptr, node);
+        return this.vtable.visitFactor(this.ptr, node);
     }
     pub fn visitFactorExpr(this: *const @This(), node: *const FactorExpr) ?*anyopaque {
-        this.vtable.visitFactorExpr(this.ptr, node);
+        return this.vtable.visitFactorExpr(this.ptr, node);
     }
     pub fn visitUnary(this: *const @This(), node: *const Unary) ?*anyopaque {
-        this.vtable.visitUnary(this.ptr, node);
+        return this.vtable.visitUnary(this.ptr, node);
     }
     pub fn visitUnaryExpr(this: *const @This(), node: *const UnaryExpr) ?*anyopaque {
-        this.vtable.visitUnaryExpr(this.ptr, node);
+        return this.vtable.visitUnaryExpr(this.ptr, node);
     }
     pub fn visitCall(this: *const @This(), node: *const Call) ?*anyopaque {
-        this.vtable.visitCall(this.ptr, node);
+        return this.vtable.visitCall(this.ptr, node);
     }
     pub fn visitCallExpr(this: *const @This(), node: *const CallExpr) ?*anyopaque {
-        this.vtable.visitCallExpr(this.ptr, node);
+        return this.vtable.visitCallExpr(this.ptr, node);
     }
     pub fn visitCallFn(this: *const @This(), node: *const CallFn) ?*anyopaque {
-        this.vtable.visitCallFn(this.ptr, node);
+        return this.vtable.visitCallFn(this.ptr, node);
     }
     pub fn visitCallProperty(this: *const @This(), node: *const CallProperty) ?*anyopaque {
-        this.vtable.visitCallProperty(this.ptr, node);
+        return this.vtable.visitCallProperty(this.ptr, node);
     }
     pub fn visitFnArg(this: *const @This(), node: *const FnArg) ?*anyopaque {
-        this.vtable.visitFnArg(this.ptr, node);
+        return this.vtable.visitFnArg(this.ptr, node);
     }
     pub fn visitPrimary(this: *const @This(), node: *const Primary) ?*anyopaque {
-        this.vtable.visitPrimary(this.ptr, node);
+        return this.vtable.visitPrimary(this.ptr, node);
     }
     pub fn visitGroupExpr(this: *const @This(), node: *const GroupExpr) ?*anyopaque {
-        this.vtable.visitGroupExpr(this.ptr, node);
+        return this.vtable.visitGroupExpr(this.ptr, node);
     }
     pub fn visitProtoAccess(this: *const @This(), node: *const ProtoAccess) ?*anyopaque {
-        this.vtable.visitProtoAccess(this.ptr, node);
+        return this.vtable.visitProtoAccess(this.ptr, node);
     }
 };
 
@@ -272,19 +278,22 @@ pub fn reset(this: *@This(), allocator: Allocator) void {
     this.errors.clearAndFree(allocator);
 }
 
-pub fn getErrors(this: *@This()) ?[]const Error {
+pub fn errs(this: *@This()) ?[]const Error {
     if (this.errors.items.len == 0) return null;
     return this.errors.items;
 }
 
-pub inline fn expectOrHandleErrorAndSync(this: *@This(), allocator: Allocator, comptime expected: anytype) !?Token {
+pub inline fn match(
+    this: *@This(),
+    allocator: Allocator,
+    comptime behaviour: @typeInfo(@TypeOf(Tokenizer.match)).@"fn".params[1].type.?,
+    comptime expected: anytype,
+) !?Token {
     assert(@typeInfo(@TypeOf(expected)) == .@"struct");
     assert(@typeInfo(@TypeOf(expected)).@"struct".fields.len >= 1);
 
-    // Next token is expected, return gracefully 😄
-    if (this.tokens.expect(expected)) |token| return token;
+    if (this.tokens.match(behaviour, expected)) |token| return token;
 
-    // 💀
     const token = this.tokens.peek();
     try this.errors.append(allocator, .{
         .message = try fmt.allocPrint(allocator, "Expected {s}, got '{s}'", .{
@@ -293,7 +302,7 @@ pub inline fn expectOrHandleErrorAndSync(this: *@This(), allocator: Allocator, c
                 for (1..@typeInfo(@TypeOf(expected)).@"struct".fields.len) |i| message = message ++ ", '" ++ @tagName(expected[i]) ++ "'";
                 break :tokens message;
             },
-            if (token) |tok| @tagName(tok.tag) else "Unexpected EOF",
+            if (token) |tok| @tagName(tok.tag) else "EOF",
         }),
         .span = if (token) |tok| .{
             .begin = this.tokens.pos + 1,
@@ -304,74 +313,5 @@ pub inline fn expectOrHandleErrorAndSync(this: *@This(), allocator: Allocator, c
         },
     });
 
-    return this.tokens.sync(expected);
-}
-
-pub inline fn checkOrHandleError(this: *@This(), allocator: Allocator, comptime expected: anytype) !?Token {
-    assert(@typeInfo(@TypeOf(expected)) == .@"struct");
-    assert(@typeInfo(@TypeOf(expected)).@"struct".fields.len >= 1);
-
-    // Next token is expected, return gracefully 😄
-    if (this.tokens.check(expected)) |token| return token;
-
-    // 💀
-    const token = this.tokens.peek();
-    try this.errors.append(allocator, .{
-        .message = try fmt.allocPrint(allocator, "Expected {s}, got '{s}'", .{
-            comptime tokens: {
-                var message: []const u8 = "'" ++ @tagName(expected[0]) ++ "'";
-                for (1..@typeInfo(@TypeOf(expected)).@"struct".fields.len) |i| message = message ++ ", '" ++ @tagName(expected[i]) ++ "'";
-                break :tokens message;
-            },
-            if (token) |tok| @tagName(tok.tag) else "Unexpected EOF",
-        }),
-        .span = if (token) |tok| .{
-            .begin = this.tokens.pos + 1,
-            .end = this.tokens.pos + tok.value.len + 1,
-        } else .{
-            .begin = this.tokens.pos,
-            .end = this.tokens.pos,
-        },
-    });
-
-    return this.tokens.sync(expected);
-}
-
-pub fn MakeFormat(T: type) type {
-    return struct {
-        depth: usize = 0,
-        data: *const T,
-
-        pub fn format(this: @This(), writer: *Io.Writer) Io.Writer.Error!void {
-            const depth = this.depth;
-
-            for (0..depth) |_| try writer.print(color.SEP, .{});
-            try writer.print("{s}{s}{s}\n", .{ color.FG.BLUE, @typeName(T), color.RESET });
-
-            switch (@typeInfo(T)) {
-                .@"struct" => |s| inline for (s.fields) |field| switch (@typeInfo(field.type)) {
-                    .pointer => |ptr| switch (ptr.size) {
-                        .one => try writer.print("{f}", @field(this.data, field.name).format(depth + 1)),
-                        else => for (@field(this.data, field.name)) |f| try writer.print("{f}", f.format(depth + 1)),
-                    },
-                    .optional => if (@field(this.data, field.name)) |f|
-                        if (comptime mem.find(u8, @typeName(@TypeOf(f)), "Box")) |_|
-                            try writer.print("{f}", @field(f, "value").format(depth + 1))
-                        else
-                            try writer.print("{f}", f.format(depth + 1)),
-                    else => if (comptime mem.find(u8, @typeName(field.type), "Box")) |_|
-                        try writer.print("{f}", @field(@field(this.data, field.name), "value").format(depth + 1))
-                    else
-                        try writer.print("{f}", @field(this.data, field.name).format(depth + 1)),
-                },
-                .@"union" => |_| switch (this.data.*) {
-                    inline else => |f| if (comptime mem.find(u8, @typeName(@TypeOf(f)), "Box")) |_|
-                        try writer.print("{f}", @field(f, "value").format(depth + 1))
-                    else
-                        try writer.print("{f}", f.format(depth + 1)),
-                },
-                else => @compileError("MakeFormat only supports structs and tagged unions"),
-            }
-        }
-    };
+    return this.tokens.sync(behaviour, expected);
 }

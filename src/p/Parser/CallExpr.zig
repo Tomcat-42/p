@@ -8,7 +8,7 @@ const Parser = p.Parser;
 const CallFn = Parser.CallFn;
 const CallProperty = Parser.CallProperty;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 
 pub const CallExpr = union(enum) {
     call_fn: CallFn,

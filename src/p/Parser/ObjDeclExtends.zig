@@ -6,22 +6,22 @@ const Allocator = mem.Allocator;
 const p = @import("p");
 const Parser = p.Parser;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 extends: Token,
 id: Token,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const extends = try parser.expectOrHandleErrorAndSync(allocator, .{.extends}) orelse return null;
-    const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
+    const extends = try parser.match(allocator, .consume, .{.extends}) orelse return null;
+    const id = try parser.match(allocator, .consume, .{.identifier}) orelse return null;
 
     return .{ .extends = extends, .id = id };
 }
 
 pub fn deinit(_: *@This(), _: Allocator) void {}
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitObjDeclExtends)).@"fn".return_type.?  {
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitObjDeclExtends)).@"fn".return_type.? {
     visitor.visitObjDeclExtends(this);
 }
 

@@ -8,7 +8,7 @@ const Parser = p.Parser;
 const UnaryExpr = Parser.UnaryExpr;
 const Call = Parser.Call;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const util = @import("util");
 const Box = util.Box;
 
@@ -17,12 +17,24 @@ pub const Unary = union(enum) {
     call: Call,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const lookahead = parser.tokens.peek() orelse return null;
+        const lookahead = try parser.match(allocator, .peek, .{
+            .@"-",
+            .@"!",
+            .true,
+            .false,
+            .nil,
+            .this,
+            .number,
+            .string,
+            .identifier,
+            .@"(",
+            .proto,
+        }) orelse return null;
 
         return switch (lookahead.tag) {
             .@"-", .@"!" => .{ .unary_expr = try .init(allocator, try UnaryExpr.parse(parser, allocator) orelse return null) },
             .true, .false, .nil, .this, .number, .string, .identifier, .@"(", .proto => .{ .call = try Call.parse(parser, allocator) orelse return null },
-            else => null,
+            else => unreachable,
         };
     }
 

@@ -7,14 +7,14 @@ const p = @import("p");
 const Parser = p.Parser;
 const LogicAnd = Parser.LogicAnd;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 op: Token,
 logic_and: LogicAnd,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const op = try parser.expectOrHandleErrorAndSync(allocator, .{.@"and"}) orelse return null;
+    const op = try parser.match(allocator, .consume, .{.@"and"}) orelse return null;
     const logic_and = try LogicAnd.parse(parser, allocator) orelse return null;
 
     return .{ .op = op, .logic_and = logic_and };
@@ -24,7 +24,7 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.logic_and.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitLogicOrExpr)).@"fn".return_type.?  {
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitLogicOrExpr)).@"fn".return_type.? {
     return visitor.visitLogicOrExpr(this);
 }
 

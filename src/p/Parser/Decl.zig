@@ -10,7 +10,7 @@ const FnDecl = Parser.FnDecl;
 const VarDecl = Parser.VarDecl;
 const Stmt = Parser.Stmt;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 
 pub const Decl = union(enum) {
     ObjDecl: ObjDecl,
@@ -19,7 +19,28 @@ pub const Decl = union(enum) {
     Stmt: Stmt,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const lookahead = parser.tokens.peek() orelse return null;
+        const lookahead = try parser.match(allocator, .peek, .{
+            .object,
+            .@"fn",
+            .let,
+            .true,
+            .false,
+            .nil,
+            .this,
+            .number,
+            .string,
+            .identifier,
+            .@"(",
+            .proto,
+            .@"!",
+            .@"-",
+            .@"for",
+            .@"if",
+            .print,
+            .@"return",
+            .@"while",
+            .@"{",
+        }) orelse return null;
 
         return switch (lookahead.tag) {
             .object => .{ .ObjDecl = try ObjDecl.parse(parser, allocator) orelse return null },
@@ -43,13 +64,13 @@ pub const Decl = union(enum) {
             .@"while",
             .@"{",
             => .{ .Stmt = try Stmt.parse(parser, allocator) orelse return null },
-            else => null,
+            else => unreachable,
         };
     }
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
         switch (this.*) {
-            inline else => |decl| decl.deinit(allocator, decl),
+            inline else => |*decl| decl.deinit(allocator),
         }
     }
 

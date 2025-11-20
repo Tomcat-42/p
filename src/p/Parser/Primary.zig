@@ -8,7 +8,7 @@ const Parser = p.Parser;
 const PrimaryGroupExpr = Parser.GroupExpr;
 const PrimaryProtoAccess = Parser.ProtoAccess;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 pub const Primary = union(enum) {
@@ -23,7 +23,21 @@ pub const Primary = union(enum) {
     proto_access: PrimaryProtoAccess,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const lookahead = parser.tokens.peek() orelse return null;
+        const lookahead = try parser.match(
+            allocator,
+            .peek,
+            .{
+                .true,
+                .false,
+                .nil,
+                .this,
+                .number,
+                .string,
+                .identifier,
+                .@"(",
+                .proto,
+            },
+        ) orelse return null;
 
         return switch (lookahead.tag) {
             .true => .{ .true = parser.tokens.next().? },
@@ -35,7 +49,7 @@ pub const Primary = union(enum) {
             .identifier => .{ .id = parser.tokens.next().? },
             .@"(" => .{ .group_expr = try PrimaryGroupExpr.parse(parser, allocator) orelse return null },
             .proto => .{ .proto_access = try PrimaryProtoAccess.parse(parser, allocator) orelse return null },
-            else => null,
+            else => unreachable,
         };
     }
 
@@ -47,7 +61,7 @@ pub const Primary = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitPrimary)).@"fn".return_type.?  {
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitPrimary)).@"fn".return_type.? {
         return visitor.visitPrimary(this);
     }
 

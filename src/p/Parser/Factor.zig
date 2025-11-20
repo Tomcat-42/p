@@ -9,7 +9,7 @@ const Parser = p.Parser;
 const Unary = Parser.Unary;
 const FactorExpr = Parser.FactorExpr;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 
 first: Unary,
 suffixes: []const FactorExpr,

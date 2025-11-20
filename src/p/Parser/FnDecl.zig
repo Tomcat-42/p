@@ -9,7 +9,7 @@ const Parser = p.Parser;
 const FnParam = Parser.FnParam;
 const Block = Parser.Block;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 @"fn": Token,
@@ -20,14 +20,14 @@ params: []const FnParam,
 body: Block,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const @"fn" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"fn"}) orelse return null;
-    const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-    const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
+    const @"fn" = try parser.match(allocator, .consume, .{.@"fn"}) orelse return null;
+    const id = try parser.match(allocator, .consume, .{.identifier}) orelse return null;
+    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
 
     var params: ArrayList(FnParam) = .empty;
     errdefer params.deinit(allocator);
 
-    while (parser.tokens.peek()) |token| switch (token.tag) {
+    while (parser.tokens.match(.peek, .{.identifier})) |lookahead| switch (lookahead.tag) {
         .identifier => try params.append(
             allocator,
             try FnParam.parse(parser, allocator) orelse return null,
@@ -35,7 +35,7 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
         else => break,
     };
 
-    const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
+    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
     const body = try Block.parse(parser, allocator) orelse return null;
 
     return .{

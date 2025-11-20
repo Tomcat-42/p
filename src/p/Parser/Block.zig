@@ -6,58 +6,29 @@ const ArrayList = std.ArrayList;
 
 const p = @import("p");
 const Parser = p.Parser;
-const Stmt = Parser.Stmt;
+const Program = Parser.Program;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 @"{": Token,
-stmts: []Stmt,
+program: Program,
 @"}": Token,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const @"{" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"{"}) orelse return null;
-
-    var stmts: ArrayList(Stmt) = .empty;
-    errdefer stmts.deinit(allocator);
-
-    while (parser.tokens.peek()) |token| switch (token.tag) {
-        .true,
-        .false,
-        .nil,
-        .this,
-        .number,
-        .string,
-        .identifier,
-        .@"(",
-        .proto,
-        .@"!",
-        .@"-",
-        .@"for",
-        .@"if",
-        .print,
-        .@"return",
-        .@"while",
-        .@"{",
-        => try stmts.append(
-            allocator,
-            try Stmt.parse(parser, allocator) orelse break,
-        ),
-        else => break,
-    };
-
-    const @"}" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"}"}) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
+    const @"{" = try parser.match(allocator, .consume, .{.@"{"}) orelse return null;
+    const program = try Program.parse(parser, allocator) orelse return null;
+    const @"}" = try parser.match(allocator, .consume, .{.@"}"}) orelse return null;
 
     return .{
         .@"{" = @"{",
-        .stmts = try stmts.toOwnedSlice(allocator),
+        .program = program,
         .@"}" = @"}",
     };
 }
 
 pub fn deinit(this: *@This(), allocator: Allocator) void {
-    for (this.stmts) |*stmt| stmt.deinit(allocator);
-    allocator.free(this.stmts);
+    this.program.deinit(allocator);
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitBlock)).@"fn".return_type.? {

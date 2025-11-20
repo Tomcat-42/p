@@ -7,17 +7,17 @@ const p = @import("p");
 const Parser = p.Parser;
 const Expr = Parser.Expr;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 const util = @import("util");
 const Box = util.Box;
 
 expr: Box(Expr),
-@";": Token,
+@";": ?Token,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const expr: Box(Expr) = try .init(allocator, try Expr.parse(parser, allocator) orelse return null);
-    const @";" = try parser.expectOrHandleErrorAndSync(allocator, .{.@";"}) orelse return null;
+    const @";" = parser.tokens.match(.consume, .{.@";"});
 
     return .{ .expr = expr, .@";" = @";" };
 }

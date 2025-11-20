@@ -9,7 +9,7 @@ const Parser = p.Parser;
 const LogicAnd = Parser.LogicAnd;
 const LogicOrExpr = Parser.LogicOrExpr;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 
 first: LogicAnd,
 suffixes: []LogicOrExpr,
@@ -20,7 +20,7 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     var suffixes: ArrayList(LogicOrExpr) = .empty;
     errdefer suffixes.deinit(allocator);
 
-    while (parser.tokens.peek()) |token| switch (token.tag) {
+    while (parser.tokens.peek()) |lookahead| switch (lookahead.tag) {
         .@"or" => try suffixes.append(allocator, try LogicOrExpr.parse(parser, allocator) orelse return null),
         else => break,
     };

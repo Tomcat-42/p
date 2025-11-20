@@ -11,17 +11,15 @@ const Visitor = Parser.Visitor;
 const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
-pub const ForInit = union(enum) {
-    var_decl: VarDecl,
+pub const ForCond = union(enum) {
     expr: ExprStmt,
-    @";": Token, // Empty init
+    @";": Token, // Empty cond
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
         const lookahead = try parser.match(
             allocator,
             .peek,
             .{
-                .let,
                 .true,
                 .false,
                 .nil,
@@ -38,7 +36,6 @@ pub const ForInit = union(enum) {
         ) orelse return null;
 
         return switch (lookahead.tag) {
-            .let => .{ .var_decl = try VarDecl.parse(parser, allocator) orelse return null },
             .true,
             .false,
             .nil,

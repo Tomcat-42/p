@@ -13,7 +13,7 @@ const ReturnStmt = Parser.ReturnStmt;
 const WhileStmt = Parser.WhileStmt;
 const Block = Parser.Block;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const util = @import("util");
 const Box = util.Box;
 
@@ -27,25 +27,29 @@ pub const Stmt = union(enum) {
     block: Box(Block),
 
     pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
-        const lookahead = try parser.checkOrHandleError(allocator, .{
-            .@"for",
-            .@"if",
-            .print,
-            .@"return",
-            .@"while",
-            .@"{",
-            .true,
-            .false,
-            .nil,
-            .this,
-            .number,
-            .string,
-            .identifier,
-            .@"(",
-            .proto,
-            .@"!",
-            .@"-",
-        }) orelse return null;
+        const lookahead = try parser.match(
+            allocator,
+            .peek,
+            .{
+                .@"for",
+                .@"if",
+                .print,
+                .@"return",
+                .@"while",
+                .@"{",
+                .true,
+                .false,
+                .nil,
+                .this,
+                .number,
+                .string,
+                .identifier,
+                .@"(",
+                .proto,
+                .@"!",
+                .@"-",
+            },
+        ) orelse return null;
 
         return switch (lookahead.tag) {
             .@"for" => .{ .for_stmt = try .init(allocator, try ForStmt.parse(parser, allocator) orelse return null) },
@@ -66,7 +70,7 @@ pub const Stmt = union(enum) {
             .@"!",
             .@"-",
             => .{ .expr_stmt = try .init(allocator, try ExprStmt.parse(parser, allocator) orelse return null) },
-            else => null,
+            else => unreachable,
         };
     }
 

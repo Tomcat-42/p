@@ -6,22 +6,19 @@ const Allocator = mem.Allocator;
 const p = @import("p");
 const Parser = p.Parser;
 const VarDecl = Parser.VarDecl;
-const ExprStmt = Parser.ExprStmt;
+const Expr = Parser.Expr;
 const Visitor = Parser.Visitor;
 const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
-pub const ForInit = union(enum) {
-    var_decl: VarDecl,
-    expr: ExprStmt,
-    @";": Token, // Empty init
+pub const ForInc = struct {
+    expr: Expr,
 
     pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
         const lookahead = try parser.match(
             allocator,
             .peek,
             .{
-                .let,
                 .true,
                 .false,
                 .nil,
@@ -33,12 +30,10 @@ pub const ForInit = union(enum) {
                 .proto,
                 .@"!",
                 .@"-",
-                .@";",
             },
         ) orelse return null;
 
         return switch (lookahead.tag) {
-            .let => .{ .var_decl = try VarDecl.parse(parser, allocator) orelse return null },
             .true,
             .false,
             .nil,
@@ -50,17 +45,13 @@ pub const ForInit = union(enum) {
             .proto,
             .@"!",
             .@"-",
-            => .{ .expr = try ExprStmt.parse(parser, allocator) orelse return null },
-            .@";" => .{ .@";" = parser.tokens.next().? },
+            => .{ .expr = try Expr.parse(parser, allocator) orelse return null },
             else => unreachable,
         };
     }
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
-        switch (this.*) {
-            .@";" => {},
-            inline else => |*init| init.deinit(allocator),
-        }
+        this.expr.deinit(allocator);
     }
 
     pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitForInit)).@"fn".return_type.? {

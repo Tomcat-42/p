@@ -9,7 +9,7 @@ const ObjDeclExtends = Parser.ObjDeclExtends;
 const Block = Parser.Block;
 const Visitor = Parser.Visitor;
 const Token = p.Tokenizer.Token;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 
 object: Token,
 id: Token,
@@ -17,12 +17,12 @@ extends: ?ObjDeclExtends,
 body: Block,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const object = try parser.expectOrHandleErrorAndSync(allocator, .{.object}) orelse return null;
-    const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-    const extends: ?ObjDeclExtends = switch ((parser.tokens.peek() orelse return null).tag) {
-        .extends => try ObjDeclExtends.parse(parser, allocator) orelse return null,
-        else => null,
-    };
+    const object = try parser.match(allocator, .consume, .{.object}) orelse return null;
+    const id = try parser.match(allocator, .consume, .{.identifier}) orelse return null;
+    const extends = if (parser.tokens.match(.peek, .{.extends})) |_|
+        try ObjDeclExtends.parse(parser, allocator) orelse return null
+    else
+        null;
     const body = try Block.parse(parser, allocator) orelse return null;
 
     return .{

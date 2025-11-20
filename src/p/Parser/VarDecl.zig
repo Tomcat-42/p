@@ -7,7 +7,7 @@ const p = @import("p");
 const Parser = p.Parser;
 const VarDeclInit = Parser.VarDeclInit;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 let: Token,
@@ -16,18 +16,21 @@ init: ?VarDeclInit,
 @";": Token,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const let = try parser.expectOrHandleErrorAndSync(allocator, .{.let}) orelse return null;
-    const id = try parser.expectOrHandleErrorAndSync(allocator, .{.identifier}) orelse return null;
-    const initv: ?VarDeclInit = switch ((parser.tokens.peek() orelse return null).tag) {
-        .@"=" => try VarDeclInit.parse(parser, allocator) orelse return null,
-        else => null,
+    const let = try parser.match(allocator, .consume, .{.let}) orelse return null;
+    const id = try parser.match(allocator, .consume, .{.identifier}) orelse return null;
+    const init: ?VarDeclInit = init: {
+        const lookahead = try parser.match(allocator, .peek, .{.@"="}) orelse break :init null;
+        break :init switch (lookahead.tag) {
+            .@"=" => try VarDeclInit.parse(parser, allocator) orelse return null,
+            else => unreachable,
+        };
     };
-    const @";" = try parser.expectOrHandleErrorAndSync(allocator, .{.@";"}) orelse return null;
+    const @";" = try parser.match(allocator, .consume, .{.@";"}) orelse return null;
 
     return .{
         .let = let,
         .id = id,
-        .init = initv,
+        .init = init,
         .@";" = @";",
     };
 }

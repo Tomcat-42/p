@@ -8,7 +8,7 @@ const p = @import("p");
 const Parser = p.Parser;
 const Decl = Parser.Decl;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 
 decls: []Decl,
 
@@ -16,35 +16,36 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     var decls: ArrayList(Decl) = .empty;
     errdefer decls.deinit(allocator);
 
-    while(parser.tokens.peek()) |token| switch (token.tag) {
-            .object,
-            .@"fn",
-            .let,
-            .true,
-            .false,
-            .nil,
-            .this,
-            .number,
-            .string,
-            .identifier,
-            .@"(",
-            .proto,
-            .@"!",
-            .@"-",
-            .@"for",
-            .@"if",
-            .print,
-            .@"return",
-            .@"while",
-            .@"{" => try decls.append(allocator,try Decl.parse(parser, allocator) orelse return null),
-            else => break,
+    while (parser.tokens.peek()) |lookahead| switch (lookahead.tag) {
+        .object,
+        .@"fn",
+        .let,
+        .true,
+        .false,
+        .nil,
+        .this,
+        .number,
+        .string,
+        .identifier,
+        .@"(",
+        .proto,
+        .@"!",
+        .@"-",
+        .@"for",
+        .@"if",
+        .print,
+        .@"return",
+        .@"while",
+        .@"{",
+        => try decls.append(allocator, try Decl.parse(parser, allocator) orelse return null),
+        else => break,
     };
 
     return .{ .decls = try decls.toOwnedSlice(allocator) };
 }
 
 pub fn deinit(this: *@This(), allocator: Allocator) void {
-    for (this.decls) |*decl| decl.deinit(allocator, decl);
+    for (this.decls) |*decl| decl.deinit(allocator);
     allocator.free(this.decls);
 }
 

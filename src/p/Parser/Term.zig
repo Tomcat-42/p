@@ -9,7 +9,7 @@ const Parser = p.Parser;
 const Factor = Parser.Factor;
 const TermExpr = Parser.TermExpr;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 
 first: Factor,
 suffixes: []const TermExpr,

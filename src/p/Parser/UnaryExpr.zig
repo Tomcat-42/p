@@ -8,14 +8,14 @@ const Parser = p.Parser;
 const Unary = Parser.Unary;
 const Call = Parser.Call;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 op: Token,
 call: Unary,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const op = try parser.expectOrHandleErrorAndSync(allocator, .{ .@"-", .@"!" }) orelse return null;
+    const op = try parser.match(allocator, .consume, .{ .@"-", .@"!" }) orelse return null;
     const call = try Call.parse(parser, allocator) orelse return null;
 
     return .{ .op = op, .call = .{ .call = call } };

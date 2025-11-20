@@ -43,7 +43,7 @@ const Repl = struct {
         const parseTree = try parser.parse(allocator);
         if (parseTree) |cst| try stdout.print("{f}\n", .{cst.format(0)});
 
-        if (parser.getErrors()) |errors| try this.reportErrors(errors);
+        if (parser.errs()) |errors| try this.reportErrors(errors);
     }
 };
 

@@ -9,7 +9,7 @@ const Parser = p.Parser;
 const Primary = Parser.Primary;
 const CallExpr = Parser.CallExpr;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 
 primary: Primary,
 calls: []CallExpr,

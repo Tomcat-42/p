@@ -8,7 +8,7 @@ const p = @import("p");
 const Parser = p.Parser;
 const FnArg = Parser.FnArg;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 @"(": Token,
@@ -16,12 +16,24 @@ args: []FnArg,
 @")": Token,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
+    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
 
     var args: ArrayList(FnArg) = .empty;
     errdefer args.deinit(allocator);
 
-    while (parser.tokens.peek()) |token| switch (token.tag) {
+    while (try parser.match(allocator, .peek, .{
+        .true,
+        .false,
+        .nil,
+        .this,
+        .number,
+        .string,
+        .identifier,
+        .@"(",
+        .proto,
+        .@"!",
+        .@"-",
+    })) |lookahead| switch (lookahead.tag) {
         .true,
         .false,
         .nil,
@@ -37,10 +49,10 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
             allocator,
             try FnArg.parse(parser, allocator) orelse return null,
         ),
-        else => break,
+        else => unreachable,
     };
 
-    const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
+    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
 
     return .{ .@"(" = @"(", .args = try args.toOwnedSlice(allocator), .@")" = @")" };
 }

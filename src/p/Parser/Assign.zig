@@ -3,27 +3,23 @@ const fmt = std.fmt;
 const mem = std.mem;
 const Allocator = mem.Allocator;
 
+const Box = @import("util").Box;
 const p = @import("p");
 const Parser = p.Parser;
 const AssignExpr = Parser.AssignExpr;
 const LogicOr = Parser.LogicOr;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
-const util = @import("util");
-const Box = util.Box;
+const MakeFormat = p.util.TreeFormatter;
 
 logic_or: Box(LogicOr),
 assign_expr: ?Box(AssignExpr) = null,
 
 pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
     const logic_or: Box(LogicOr) = try .init(allocator, try LogicOr.parse(parser, allocator) orelse return null);
-    const assign_expr: ?Box(AssignExpr) = assign: {
-        const lookahead = parser.tokens.peek() orelse break :assign null;
-        break :assign switch (lookahead.tag) {
-            .@"=" => try .init(allocator, try AssignExpr.parse(parser, allocator) orelse return null),
-            else => null,
-        };
-    };
+    const assign_expr: ?Box(AssignExpr) = if (parser.tokens.match(.peek, .{.@"="})) |_|
+        try .init(allocator, try AssignExpr.parse(parser, allocator) orelse return null)
+    else
+        null;
 
     return .{ .logic_or = logic_or, .assign_expr = assign_expr };
 }

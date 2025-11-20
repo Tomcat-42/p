@@ -7,7 +7,7 @@ const p = @import("p");
 const Parser = p.Parser;
 const Expr = Parser.Expr;
 const Visitor = Parser.Visitor;
-const MakeFormat = Parser.MakeFormat;
+const MakeFormat = p.util.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 print: Token,
@@ -17,11 +17,11 @@ expr: Expr,
 @";": Token,
 
 pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const print = try parser.expectOrHandleErrorAndSync(allocator, .{.print}) orelse return null;
-    const @"(" = try parser.expectOrHandleErrorAndSync(allocator, .{.@"("}) orelse return null;
+    const print = try parser.match(allocator, .consume, .{.print}) orelse return null;
+    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
     const expr = try Expr.parse(parser, allocator) orelse return null;
-    const @")" = try parser.expectOrHandleErrorAndSync(allocator, .{.@")"}) orelse return null;
-    const @";" = try parser.expectOrHandleErrorAndSync(allocator, .{.@";"}) orelse return null;
+    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
+    const @";" = try parser.match(allocator, .consume, .{.@";"}) orelse return null;
 
     return .{
         .print = print,
