@@ -19,14 +19,16 @@ pub fn init(allocator: Allocator) @This() {
     return .{ .allocator = allocator };
 }
 
-pub fn analyze(this: *@This(), program: Parser.Program) !?Program {
+pub fn analyze(this: *@This(), cst: Parser.Program) !?Program {
     var ast_builder: AstBuilder = .init(this);
 
-    return try move(
+    const ast = try move(
         Program,
         this.allocator,
-        @ptrCast(@alignCast(try program.visit(ast_builder.visitor()))),
+        @ptrCast(@alignCast(try cst.visit(ast_builder.visitor()))),
     );
+
+    return ast;
 }
 
 pub fn deinit(this: *@This()) void {
