@@ -9,28 +9,28 @@ const Parser = p.Parser;
 const Primary = Parser.Primary;
 const CallExpr = Parser.CallExpr;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 
 primary: Primary,
 calls: []CallExpr,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const primary = try Primary.parse(parser, allocator) orelse return null;
+pub fn parse(parser: *Parser) !?@This() {
+    const primary = try Primary.parse(parser) orelse return null;
 
     var calls: ArrayList(CallExpr) = .empty;
-    errdefer calls.deinit(allocator);
+    errdefer calls.deinit(parser.allocator);
 
     while (parser.tokens.peek()) |token| switch (token.tag) {
         .@"(", .@"." => try calls.append(
-            allocator,
-            try CallExpr.parse(parser, allocator) orelse return null,
+            parser.allocator,
+            try CallExpr.parse(parser) orelse return null,
         ),
         else => break,
     };
 
     return .{
         .primary = primary,
-        .calls = try calls.toOwnedSlice(allocator),
+        .calls = try calls.toOwnedSlice(parser.allocator),
     };
 }
 
@@ -48,4 +48,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

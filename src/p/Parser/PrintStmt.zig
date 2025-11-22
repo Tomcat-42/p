@@ -7,7 +7,7 @@ const p = @import("p");
 const Parser = p.Parser;
 const Expr = Parser.Expr;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 print: Token,
@@ -16,12 +16,12 @@ expr: Expr,
 @")": Token,
 @";": Token,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const print = try parser.match(allocator, .consume, .{.print}) orelse return null;
-    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
-    const expr = try Expr.parse(parser, allocator) orelse return null;
-    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
-    const @";" = try parser.match(allocator, .consume, .{.@";"}) orelse return null;
+pub fn parse(parser: *Parser) !?@This() {
+    const print = try parser.match(parser.allocator, .consume, .{.print}) orelse return null;
+    const @"(" = try parser.match(parser.allocator, .consume, .{.@"("}) orelse return null;
+    const expr = try Expr.parse(parser) orelse return null;
+    const @")" = try parser.match(parser.allocator, .consume, .{.@")"}) orelse return null;
+    const @";" = try parser.match(parser.allocator, .consume, .{.@";"}) orelse return null;
 
     return .{
         .print = print,
@@ -44,4 +44,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

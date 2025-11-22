@@ -7,7 +7,7 @@ const p = @import("p");
 const Parser = p.Parser;
 const VarDeclInit = Parser.VarDeclInit;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 let: Token,
@@ -15,17 +15,17 @@ id: Token,
 init: ?VarDeclInit,
 @";": Token,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const let = try parser.match(allocator, .consume, .{.let}) orelse return null;
-    const id = try parser.match(allocator, .consume, .{.identifier}) orelse return null;
+pub fn parse(parser: *Parser) !?@This() {
+    const let = try parser.match(parser.allocator, .consume, .{.let}) orelse return null;
+    const id = try parser.match(parser.allocator, .consume, .{.identifier}) orelse return null;
     const init: ?VarDeclInit = init: {
-        const lookahead = try parser.match(allocator, .peek, .{.@"="}) orelse break :init null;
+        const lookahead = parser.tokens.match(.peek, .{.@"="}) orelse break :init null;
         break :init switch (lookahead.tag) {
-            .@"=" => try VarDeclInit.parse(parser, allocator) orelse return null,
+            .@"=" => try VarDeclInit.parse(parser) orelse return null,
             else => unreachable,
         };
     };
-    const @";" = try parser.match(allocator, .consume, .{.@";"}) orelse return null;
+    const @";" = try parser.match(parser.allocator, .consume, .{.@";"}) orelse return null;
 
     return .{
         .let = let,
@@ -40,11 +40,11 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitVarDecl)).@"fn".return_type.? {
-    visitor.visitVarDecl(this);
+    return visitor.visitVarDecl(this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

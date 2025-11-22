@@ -8,15 +8,15 @@ const Parser = p.Parser;
 const Unary = Parser.Unary;
 const Call = Parser.Call;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 op: Token,
 call: Unary,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const op = try parser.match(allocator, .consume, .{ .@"-", .@"!" }) orelse return null;
-    const call = try Call.parse(parser, allocator) orelse return null;
+pub fn parse(parser: *Parser) !?@This() {
+    const op = try parser.match(parser.allocator, .consume, .{ .@"-", .@"!" }) orelse return null;
+    const call = try Call.parse(parser) orelse return null;
 
     return .{ .op = op, .call = .{ .call = call } };
 }
@@ -33,4 +33,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

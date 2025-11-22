@@ -1,18 +1,18 @@
 Program         = { Decl };
 Decl            = ObjDecl | FnDecl | VarDecl | Stmt;
 
-ObjDecl         = "object", ID, [ ObjDeclExtends ], Program;
+ObjDecl         = "object", ID, [ ObjDeclExtends ], Block;
 ObjDeclExtends  = "extends", ID;
 
-FnDecl          = "fn", ID, "(", { FnParam }, ")", Program;
+FnDecl          = "fn", ID, "(", { FnParam }, ")", Block;
 FnParam          = ID, [ "," ];
 
 VarDecl         = "let", ID, [ VarDeclInit ], ";";
 VarDeclInit     = "=", Expr;
 
-Stmt            = ExprStmt | ForStmt | IfStmt | PrintStmt | ReturnStmt | WhileStmt | Program;
+Stmt            = ExprStmt | ForStmt | IfStmt | PrintStmt | ReturnStmt | WhileStmt | Block;
 
-ExprStmt        = Expr, [";"];
+ExprStmt        = Expr, ";";
 
 ForStmt         = "for", "(", [ ForInit ], [ ForCond ], [ ForIncr ], ")", Stmt;
 ForInit         = VarDecl | ExprStmt | ";";
@@ -65,14 +65,13 @@ Primary         = "true"
                 | "false"
                 | "nil"
                 | "this"
+                | "proto"
                 | NUMBER
                 | STRING
                 | ID
-                | GroupExpr
-                | ProtoAccess;
+                | GroupExpr;
 
 GroupExpr       = "(", Expr, ")";
-ProtoAccessExpr = "proto", ".", ID;
 
 ALPHA           = "A" .. "Z" | "a" .. "z" | "_";
 DIGIT           = "0" .. "9";

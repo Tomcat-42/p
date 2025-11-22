@@ -13,22 +13,21 @@ const ReturnStmt = Parser.ReturnStmt;
 const WhileStmt = Parser.WhileStmt;
 const Block = Parser.Block;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const util = @import("util");
-const Box = util.Box;
 
 pub const Stmt = union(enum) {
-    expr_stmt: Box(ExprStmt),
-    for_stmt: Box(ForStmt),
-    if_stmt: Box(IfStmt),
-    print_stmt: Box(PrintStmt),
-    return_stmt: Box(ReturnStmt),
-    while_stmt: Box(WhileStmt),
-    block: Box(Block),
+    expr_stmt: ExprStmt,
+    for_stmt: ForStmt,
+    if_stmt: *IfStmt,
+    print_stmt: PrintStmt,
+    return_stmt: ReturnStmt,
+    while_stmt: WhileStmt,
+    block: *Block,
 
-    pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
+    pub fn parse(parser: *Parser) anyerror!?@This() {
         const lookahead = try parser.match(
-            allocator,
+            parser.allocator,
             .peek,
             .{
                 .@"for",
@@ -52,12 +51,12 @@ pub const Stmt = union(enum) {
         ) orelse return null;
 
         return switch (lookahead.tag) {
-            .@"for" => .{ .for_stmt = try .init(allocator, try ForStmt.parse(parser, allocator) orelse return null) },
-            .@"if" => .{ .if_stmt = try .init(allocator, try IfStmt.parse(parser, allocator) orelse return null) },
-            .print => .{ .print_stmt = try .init(allocator, try PrintStmt.parse(parser, allocator) orelse return null) },
-            .@"return" => .{ .return_stmt = try .init(allocator, try ReturnStmt.parse(parser, allocator) orelse return null) },
-            .@"while" => .{ .while_stmt = try .init(allocator, try WhileStmt.parse(parser, allocator) orelse return null) },
-            .@"{" => .{ .block = try .init(allocator, try Block.parse(parser, allocator) orelse return null) },
+            .@"for" => .{ .for_stmt = try ForStmt.parse(parser) orelse return null },
+            .@"if" => .{ .if_stmt = try util.dupe(IfStmt, parser.allocator, try IfStmt.parse(parser) orelse return null) },
+            .print => .{ .print_stmt = try PrintStmt.parse(parser) orelse return null },
+            .@"return" => .{ .return_stmt = try ReturnStmt.parse(parser) orelse return null },
+            .@"while" => .{ .while_stmt = try WhileStmt.parse(parser) orelse return null },
+            .@"{" => .{ .block = try util.dupe(Block, parser.allocator, try Block.parse(parser) orelse return null) },
             .true,
             .false,
             .nil,
@@ -69,17 +68,22 @@ pub const Stmt = union(enum) {
             .proto,
             .@"!",
             .@"-",
-            => .{ .expr_stmt = try .init(allocator, try ExprStmt.parse(parser, allocator) orelse return null) },
+            => .{ .expr_stmt = try ExprStmt.parse(parser) orelse return null },
             else => unreachable,
         };
     }
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
         switch (this.*) {
-            inline else => |box| {
-                box.value.deinit(allocator);
-                box.deinit(allocator);
+            .if_stmt => |ptr| {
+                ptr.deinit(allocator);
+                allocator.destroy(ptr);
             },
+            .block => |ptr| {
+                ptr.deinit(allocator);
+                allocator.destroy(ptr);
+            },
+            inline else => |*stmt| stmt.deinit(allocator),
         }
     }
 
@@ -91,5 +95,5 @@ pub const Stmt = union(enum) {
         return .{ .data = .{ .depth = depth, .data = this } };
     }
 
-    const Format = MakeFormat(@This());
+    const Format = TreeFormatter(@This());
 };

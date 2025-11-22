@@ -7,18 +7,24 @@ const File = fs.File;
 const Io = std.Io;
 const Allocator = mem.Allocator;
 const assert = std.debug.assert;
+var LOG_LEVEL = std.log.default_level;
 const builtin = @import("builtin");
 
 const p = @import("p");
 const Tokenizer = p.Tokenizer;
 const Parser = p.Parser;
+const Sema = p.Sema;
 const util = @import("util");
 const color = util.color;
 const getopt = util.getopt;
 const err = util.err;
 
+const Cli = @import("pi/Cli.zig");
+
+pub const log = std.log.scoped(.pi);
+
 const Repl = struct {
-    prompt: []const u8 = color.FG.GREEN ++ "p> " ++ color.RESET,
+    cli: Cli = .{},
 
     fn reportErrors(_: *const @This(), errors: []const Parser.Error) !void {
         for (errors) |e| try stderr.print("{d}:{d} Error: {s}{s}{s}\n", .{
@@ -32,18 +38,46 @@ const Repl = struct {
         try stderr.flush();
     }
 
-    pub fn eval(this: *const @This(), allocator: Allocator, code: []const u8) !void {
+    pub fn eval(this: *const @This(), allocator: Allocator, code: []const u8) !?[]const u8 {
+        //NOTE: Only for debugging
         var tokens: Tokenizer = .init(code);
-        while (tokens.next()) |tok| std.debug.print("{f}", .{tok.format(0)});
-        tokens.reset();
+        while (tokens.next()) |tok|
+            log.debug("\n{f}", .{tok.format(0)});
 
-        var parser: Parser = .init(&tokens);
-        defer parser.deinit(allocator);
+        var parser: Parser = .init(allocator, .init(code));
+        defer parser.deinit();
 
-        const parseTree = try parser.parse(allocator);
-        if (parseTree) |cst| try stdout.print("{f}\n", .{cst.format(0)});
+        var cst = if (try parser.parse()) |cst| cst else {
+            if (parser.errs()) |errors| try this.reportErrors(errors);
+            return null;
+        };
+        defer cst.deinit(allocator);
 
-        if (parser.errs()) |errors| try this.reportErrors(errors);
+        log.debug("\n{f}\n", .{cst.format(0)});
+
+        var sema: Sema = .init(allocator);
+        defer sema.deinit();
+
+        var ast = if (try sema.analyze(cst)) |ast| ast else {
+            if (sema.errs()) |errors| try this.reportErrors(errors);
+            return null;
+        };
+        defer ast.deinit(allocator);
+
+        log.debug("\n{f}\n", .{ast.format(0)});
+
+        return null;
+    }
+
+    pub fn run(this: *const @This(), allocator: Allocator, _: Io) !void {
+        while (try this.cli.read(allocator)) |input| {
+            defer allocator.free(input);
+            if (input.len == 0) continue;
+
+            const value = try this.eval(allocator, input);
+            try stdout.print("⇒ {?s}\n", .{value});
+            try stdout.flush();
+        }
     }
 };
 
@@ -62,12 +96,13 @@ pub fn main() !void {
     defer threaded.deinit();
     const io = threaded.io();
 
-    var interpreter: Repl = .{};
+    var interpreter: Repl = .{ .cli = .init("p") };
 
-    var opts = getopt.init("i:hv");
+    var opts: getopt = .init("i:hVv");
     while (opts.next() catch return opts.usage()) |opt| switch (opt) {
         'h' => return opts.usage(),
-        'v' => return version(),
+        'V' => return version(),
+        'v' => LOG_LEVEL = .debug,
         else => unreachable,
     };
 
@@ -79,20 +114,14 @@ pub fn main() !void {
         var fileReader = file.reader(io, &buffer);
         const reader = &fileReader.interface;
 
-        while (try reader.takeDelimiter('\n')) |line| try interpreter.eval(allocator, line);
+        while (try reader.takeDelimiter('\n')) |line| {
+            const value = try interpreter.eval(allocator, line);
+            try stdout.print("⇒ {?s}\n", .{value});
+        }
+        try stdout.flush();
     };
 
-    var stdin_buffer: [BUFFER_SIZE]u8 = undefined;
-    var stdin_reader = File.stdin().reader(io, &stdin_buffer);
-    const stdin = &stdin_reader.interface;
-
-    while (true) {
-        try stdout.print("{s}", .{interpreter.prompt});
-        try stdout.flush();
-
-        const line = try stdin.takeDelimiter('\n') orelse break;
-        try interpreter.eval(allocator, line);
-    }
+    return Repl.run(&interpreter, allocator, io);
 }
 
 fn version() !void {

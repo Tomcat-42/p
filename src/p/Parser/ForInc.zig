@@ -8,15 +8,15 @@ const Parser = p.Parser;
 const VarDecl = Parser.VarDecl;
 const Expr = Parser.Expr;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 pub const ForInc = struct {
     expr: Expr,
 
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    pub fn parse(parser: *Parser) !?@This() {
         const lookahead = try parser.match(
-            allocator,
+            parser.allocator,
             .peek,
             .{
                 .true,
@@ -45,7 +45,7 @@ pub const ForInc = struct {
             .proto,
             .@"!",
             .@"-",
-            => .{ .expr = try Expr.parse(parser, allocator) orelse return null },
+            => .{ .expr = try Expr.parse(parser) orelse return null },
             else => unreachable,
         };
     }
@@ -54,13 +54,13 @@ pub const ForInc = struct {
         this.expr.deinit(allocator);
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitForInit)).@"fn".return_type.? {
-        return visitor.visitForInit(this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitForInc)).@"fn".return_type.? {
+        return visitor.visitForInc(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
         return .{ .data = .{ .depth = depth, .data = this } };
     }
 
-    const Format = MakeFormat(@This());
+    const Format = TreeFormatter(@This());
 };

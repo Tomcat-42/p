@@ -5,24 +5,23 @@ const Allocator = mem.Allocator;
 
 const p = @import("p");
 const Parser = p.Parser;
-const Assign = Parser.Assign;
+const Expr = Parser.Expr;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 @"=": Token,
-value: Assign,
+expr: Expr,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const @"=" = try parser.match(allocator, .consume, .{.@"="}) orelse return null;
-    const value = try Assign.parse(parser, allocator) orelse return null;
+pub fn parse(parser: *Parser) !?@This() {
+    const @"=" = try parser.match(parser.allocator, .consume, .{.@"="}) orelse return null;
+    const value = try Expr.parse(parser) orelse return null;
 
-    return .{ .@"=" = @"=", .value = value };
+    return .{ .@"=" = @"=", .expr = value };
 }
 
 pub fn deinit(this: *@This(), allocator: Allocator) void {
-    this.target.deinit(allocator);
-    this.value.deinit(allocator);
+    this.expr.deinit(allocator);
 }
 
 pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitAssign)).@"fn".return_type.? {
@@ -33,4 +32,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

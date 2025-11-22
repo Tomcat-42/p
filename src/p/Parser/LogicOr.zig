@@ -9,31 +9,31 @@ const Parser = p.Parser;
 const LogicAnd = Parser.LogicAnd;
 const LogicOrExpr = Parser.LogicOrExpr;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 
 first: LogicAnd,
 suffixes: []LogicOrExpr,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const first = try LogicAnd.parse(parser, allocator) orelse return null;
+pub fn parse(parser: *Parser) !?@This() {
+    const first = try LogicAnd.parse(parser) orelse return null;
 
     var suffixes: ArrayList(LogicOrExpr) = .empty;
-    errdefer suffixes.deinit(allocator);
+    errdefer suffixes.deinit(parser.allocator);
 
     while (parser.tokens.peek()) |lookahead| switch (lookahead.tag) {
-        .@"or" => try suffixes.append(allocator, try LogicOrExpr.parse(parser, allocator) orelse return null),
+        .@"or" => try suffixes.append(parser.allocator, try LogicOrExpr.parse(parser) orelse return null),
         else => break,
     };
 
     return .{
         .first = first,
-        .suffixes = try suffixes.toOwnedSlice(allocator),
+        .suffixes = try suffixes.toOwnedSlice(parser.allocator),
     };
 }
 
 pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.first.deinit(allocator);
-    for (this.suffixes) |suffix| suffix.deinit(allocator);
+    for (this.suffixes) |*suffix| suffix.deinit(allocator);
     allocator.free(this.suffixes);
 }
 
@@ -45,4 +45,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

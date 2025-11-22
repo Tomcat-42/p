@@ -8,7 +8,7 @@ const Parser = p.Parser;
 const VarDecl = Parser.VarDecl;
 const ExprStmt = Parser.ExprStmt;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 pub const ForInit = union(enum) {
@@ -16,9 +16,9 @@ pub const ForInit = union(enum) {
     expr: ExprStmt,
     @";": Token, // Empty init
 
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    pub fn parse(parser: *Parser) !?@This() {
         const lookahead = try parser.match(
-            allocator,
+            parser.allocator,
             .peek,
             .{
                 .let,
@@ -38,7 +38,7 @@ pub const ForInit = union(enum) {
         ) orelse return null;
 
         return switch (lookahead.tag) {
-            .let => .{ .var_decl = try VarDecl.parse(parser, allocator) orelse return null },
+            .let => .{ .var_decl = try VarDecl.parse(parser) orelse return null },
             .true,
             .false,
             .nil,
@@ -50,7 +50,7 @@ pub const ForInit = union(enum) {
             .proto,
             .@"!",
             .@"-",
-            => .{ .expr = try ExprStmt.parse(parser, allocator) orelse return null },
+            => .{ .expr = try ExprStmt.parse(parser) orelse return null },
             .@";" => .{ .@";" = parser.tokens.next().? },
             else => unreachable,
         };
@@ -71,5 +71,5 @@ pub const ForInit = union(enum) {
         return .{ .data = .{ .depth = depth, .data = this } };
     }
 
-    const Format = MakeFormat(@This());
+    const Format = TreeFormatter(@This());
 };

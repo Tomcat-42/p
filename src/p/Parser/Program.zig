@@ -8,13 +8,13 @@ const p = @import("p");
 const Parser = p.Parser;
 const Decl = Parser.Decl;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 
 decls: []Decl,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+pub fn parse(parser: *Parser) !?@This() {
     var decls: ArrayList(Decl) = .empty;
-    errdefer decls.deinit(allocator);
+    errdefer decls.deinit(parser.allocator);
 
     while (parser.tokens.peek()) |lookahead| switch (lookahead.tag) {
         .object,
@@ -37,11 +37,11 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
         .@"return",
         .@"while",
         .@"{",
-        => try decls.append(allocator, try Decl.parse(parser, allocator) orelse return null),
+        => try decls.append(parser.allocator, try Decl.parse(parser) orelse return null),
         else => break,
     };
 
-    return .{ .decls = try decls.toOwnedSlice(allocator) };
+    return .{ .decls = try decls.toOwnedSlice(parser.allocator) };
 }
 
 pub fn deinit(this: *@This(), allocator: Allocator) void {
@@ -57,4 +57,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

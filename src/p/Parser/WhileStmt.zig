@@ -8,7 +8,7 @@ const Parser = p.Parser;
 const Expr = Parser.Expr;
 const Block = Parser.Block;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 @"while": Token,
@@ -17,12 +17,12 @@ cond: Expr,
 @")": Token,
 body: Block,
 
-pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
-    const @"while" = try parser.match(allocator, .consume, .{.@"while"}) orelse return null;
-    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
-    const cond = try Expr.parse(parser, allocator) orelse return null;
-    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
-    const body = try Block.parse(parser, allocator) orelse return null;
+pub fn parse(parser: *Parser) anyerror!?@This() {
+    const @"while" = try parser.match(parser.allocator, .consume, .{.@"while"}) orelse return null;
+    const @"(" = try parser.match(parser.allocator, .consume, .{.@"("}) orelse return null;
+    const cond = try Expr.parse(parser) orelse return null;
+    const @")" = try parser.match(parser.allocator, .consume, .{.@")"}) orelse return null;
+    const body = try Block.parse(parser) orelse return null;
 
     return .{
         .@"while" = @"while",
@@ -46,4 +46,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

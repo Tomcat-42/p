@@ -31,6 +31,12 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const isocline = b.dependency("isocline", .{
+        .optimize = optimize,
+        .target = target,
+    });
+    pi_mod.linkLibrary(isocline.artifact("isocline"));
+
     const p_deps: []const Import = &.{
         .{ .name = "manifest", .module = mod: {
             const opts = b.addOptions();
@@ -51,7 +57,6 @@ pub fn build(b: *std.Build) !void {
     // Targets
     const p = b.addLibrary(.{
         .name = "p",
-        .linkage = .static,
         .root_module = p_mod,
         .use_llvm = true,
     });
@@ -69,7 +74,6 @@ pub fn build(b: *std.Build) !void {
 
     const pi = b.addExecutable(.{
         .name = "pi",
-        .linkage = .static,
         .root_module = pi_mod,
         .use_llvm = true,
     });

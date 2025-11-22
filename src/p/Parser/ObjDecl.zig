@@ -9,21 +9,21 @@ const ObjDeclExtends = Parser.ObjDeclExtends;
 const Block = Parser.Block;
 const Visitor = Parser.Visitor;
 const Token = p.Tokenizer.Token;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 
 object: Token,
 id: Token,
 extends: ?ObjDeclExtends,
 body: Block,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const object = try parser.match(allocator, .consume, .{.object}) orelse return null;
-    const id = try parser.match(allocator, .consume, .{.identifier}) orelse return null;
+pub fn parse(parser: *Parser) !?@This() {
+    const object = try parser.match(parser.allocator, .consume, .{.object}) orelse return null;
+    const id = try parser.match(parser.allocator, .consume, .{.identifier}) orelse return null;
     const extends = if (parser.tokens.match(.peek, .{.extends})) |_|
-        try ObjDeclExtends.parse(parser, allocator) orelse return null
+        try ObjDeclExtends.parse(parser) orelse return null
     else
         null;
-    const body = try Block.parse(parser, allocator) orelse return null;
+    const body = try Block.parse(parser) orelse return null;
 
     return .{
         .object = object,
@@ -46,4 +46,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

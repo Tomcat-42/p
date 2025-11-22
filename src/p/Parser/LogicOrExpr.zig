@@ -7,15 +7,15 @@ const p = @import("p");
 const Parser = p.Parser;
 const LogicAnd = Parser.LogicAnd;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 op: Token,
 logic_and: LogicAnd,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const op = try parser.match(allocator, .consume, .{.@"and"}) orelse return null;
-    const logic_and = try LogicAnd.parse(parser, allocator) orelse return null;
+pub fn parse(parser: *Parser) !?@This() {
+    const op = try parser.match(parser.allocator, .consume, .{.@"and"}) orelse return null;
+    const logic_and = try LogicAnd.parse(parser) orelse return null;
 
     return .{ .op = op, .logic_and = logic_and };
 }
@@ -32,4 +32,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

@@ -8,18 +8,18 @@ const Parser = p.Parser;
 const CallFn = Parser.CallFn;
 const CallProperty = Parser.CallProperty;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 
 pub const CallExpr = union(enum) {
     call_fn: CallFn,
     call_property: CallProperty,
 
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    pub fn parse(parser: *Parser) !?@This() {
         const lookahead = parser.tokens.peek() orelse return null;
 
         return switch (lookahead.tag) {
-            .@"(" => .{ .call_fn = try CallFn.parse(parser, allocator) orelse return null },
-            .@"." => .{ .call_property = try CallProperty.parse(parser, allocator) orelse return null },
+            .@"(" => .{ .call_fn = try CallFn.parse(parser) orelse return null },
+            .@"." => .{ .call_property = try CallProperty.parse(parser) orelse return null },
             else => null,
         };
     }
@@ -38,5 +38,5 @@ pub const CallExpr = union(enum) {
         return .{ .data = .{ .depth = depth, .data = this } };
     }
 
-    const Format = MakeFormat(@This());
+    const Format = TreeFormatter(@This());
 };

@@ -7,9 +7,10 @@ const Allocator = mem.Allocator;
 const ArrayList = std.ArrayList;
 
 const p = @import("p");
+const common = p.common;
+pub const Error = common.Error;
 const Tokenizer = p.Tokenizer;
 const Token = Tokenizer.Token;
-const TreeFormatter = p.util.TreeFormatter;
 
 pub const Assign = @import("Parser/Assign.zig");
 pub const Expr = Assign;
@@ -47,7 +48,6 @@ pub const ObjDeclExtends = @import("Parser/ObjDeclExtends.zig");
 pub const Primary = @import("Parser/Primary.zig").Primary;
 pub const PrintStmt = @import("Parser/PrintStmt.zig");
 pub const Program = @import("Parser/Program.zig");
-pub const ProtoAccess = @import("Parser/ProtoAccess.zig");
 pub const ReturnStmt = @import("Parser/ReturnStmt.zig");
 pub const Stmt = @import("Parser/Stmt.zig").Stmt;
 pub const IfMainBranch = Stmt;
@@ -64,213 +64,206 @@ pub const Visitor = struct {
     vtable: VTable,
 
     pub const VTable = struct {
-        visitProgram: *const fn (this: *anyopaque, node: *const Program) ?*anyopaque,
-        visitDecl: *const fn (this: *anyopaque, node: *const Decl) ?*anyopaque,
-        visitObjDecl: *const fn (this: *anyopaque, node: *const ObjDecl) ?*anyopaque,
-        visitObjDeclExtends: *const fn (this: *anyopaque, node: *const ObjDeclExtends) ?*anyopaque,
-        visitFnDecl: *const fn (this: *anyopaque, node: *const FnDecl) ?*anyopaque,
-        visitFnParam: *const fn (this: *anyopaque, node: *const FnParam) ?*anyopaque,
-        visitVarDecl: *const fn (this: *anyopaque, node: *const VarDecl) ?*anyopaque,
-        visitVarDeclInit: *const fn (this: *anyopaque, node: *const VarDeclInit) ?*anyopaque,
+        visitProgram: *const fn (this: *anyopaque, node: *const Program) anyerror!?*anyopaque,
+        visitDecl: *const fn (this: *anyopaque, node: *const Decl) anyerror!?*anyopaque,
+        visitObjDecl: *const fn (this: *anyopaque, node: *const ObjDecl) anyerror!?*anyopaque,
+        visitObjDeclExtends: *const fn (this: *anyopaque, node: *const ObjDeclExtends) anyerror!?*anyopaque,
+        visitFnDecl: *const fn (this: *anyopaque, node: *const FnDecl) anyerror!?*anyopaque,
+        visitFnParam: *const fn (this: *anyopaque, node: *const FnParam) anyerror!?*anyopaque,
+        visitVarDecl: *const fn (this: *anyopaque, node: *const VarDecl) anyerror!?*anyopaque,
+        visitVarDeclInit: *const fn (this: *anyopaque, node: *const VarDeclInit) anyerror!?*anyopaque,
 
-        visitStmt: *const fn (this: *anyopaque, node: *const Stmt) ?*anyopaque,
-        visitExprStmt: *const fn (this: *anyopaque, node: *const ExprStmt) ?*anyopaque,
-        visitForStmt: *const fn (this: *anyopaque, node: *const ForStmt) ?*anyopaque,
-        visitForInit: *const fn (this: *anyopaque, node: *const ForInit) ?*anyopaque,
-        visitForCond: *const fn (this: *anyopaque, node: *const ForCond) ?*anyopaque,
-        visitForInc: *const fn (this: *anyopaque, node: *const ForInc) ?*anyopaque,
-        visitIfStmt: *const fn (this: *anyopaque, node: *const IfStmt) ?*anyopaque,
-        visitIfElseBranch: *const fn (this: *anyopaque, node: *const IfElseBranch) ?*anyopaque,
-        visitPrintStmt: *const fn (this: *anyopaque, node: *const PrintStmt) ?*anyopaque,
-        visitReturnStmt: *const fn (this: *anyopaque, node: *const ReturnStmt) ?*anyopaque,
-        visitWhileStmt: *const fn (this: *anyopaque, node: *const WhileStmt) ?*anyopaque,
-        visitBlock: *const fn (this: *anyopaque, node: *const Block) ?*anyopaque,
+        visitStmt: *const fn (this: *anyopaque, node: *const Stmt) anyerror!?*anyopaque,
+        visitExprStmt: *const fn (this: *anyopaque, node: *const ExprStmt) anyerror!?*anyopaque,
+        visitForStmt: *const fn (this: *anyopaque, node: *const ForStmt) anyerror!?*anyopaque,
+        visitForInit: *const fn (this: *anyopaque, node: *const ForInit) anyerror!?*anyopaque,
+        visitForCond: *const fn (this: *anyopaque, node: *const ForCond) anyerror!?*anyopaque,
+        visitForInc: *const fn (this: *anyopaque, node: *const ForInc) anyerror!?*anyopaque,
+        visitIfStmt: *const fn (this: *anyopaque, node: *const IfStmt) anyerror!?*anyopaque,
+        visitIfElseBranch: *const fn (this: *anyopaque, node: *const IfElseBranch) anyerror!?*anyopaque,
+        visitPrintStmt: *const fn (this: *anyopaque, node: *const PrintStmt) anyerror!?*anyopaque,
+        visitReturnStmt: *const fn (this: *anyopaque, node: *const ReturnStmt) anyerror!?*anyopaque,
+        visitWhileStmt: *const fn (this: *anyopaque, node: *const WhileStmt) anyerror!?*anyopaque,
+        visitBlock: *const fn (this: *anyopaque, node: *const Block) anyerror!?*anyopaque,
 
-        visitAssign: *const fn (this: *anyopaque, node: *const Assign) ?*anyopaque,
-        visitAssignExpr: *const fn (this: *anyopaque, node: *const AssignExpr) ?*anyopaque,
-        visitLogicOr: *const fn (this: *anyopaque, node: *const LogicOr) ?*anyopaque,
-        visitLogicOrExpr: *const fn (this: *anyopaque, node: *const LogicOrExpr) ?*anyopaque,
-        visitLogicAnd: *const fn (this: *anyopaque, node: *const LogicAnd) ?*anyopaque,
-        visitLogicAndExpr: *const fn (this: *anyopaque, node: *const LogicAndExpr) ?*anyopaque,
-        visitEquality: *const fn (this: *anyopaque, node: *const Equality) ?*anyopaque,
-        visitEqualityExpr: *const fn (this: *anyopaque, node: *const EqualityExpr) ?*anyopaque,
-        visitComparison: *const fn (this: *anyopaque, node: *const Comparison) ?*anyopaque,
-        visitComparisonExpr: *const fn (this: *anyopaque, node: *const ComparisonExpr) ?*anyopaque,
-        visitTerm: *const fn (this: *anyopaque, node: *const Term) ?*anyopaque,
-        visitTermExpr: *const fn (this: *anyopaque, node: *const TermExpr) ?*anyopaque,
-        visitFactor: *const fn (this: *anyopaque, node: *const Factor) ?*anyopaque,
-        visitFactorExpr: *const fn (this: *anyopaque, node: *const FactorExpr) ?*anyopaque,
-        visitUnary: *const fn (this: *anyopaque, node: *const Unary) ?*anyopaque,
-        visitUnaryExpr: *const fn (this: *anyopaque, node: *const UnaryExpr) ?*anyopaque,
-        visitCall: *const fn (this: *anyopaque, node: *const Call) ?*anyopaque,
-        visitCallExpr: *const fn (this: *anyopaque, node: *const CallExpr) ?*anyopaque,
-        visitCallFn: *const fn (this: *anyopaque, node: *const CallFn) ?*anyopaque,
-        visitCallProperty: *const fn (this: *anyopaque, node: *const CallProperty) ?*anyopaque,
-        visitFnArg: *const fn (this: *anyopaque, node: *const FnArg) ?*anyopaque,
-        visitPrimary: *const fn (this: *anyopaque, node: *const Primary) ?*anyopaque,
-        visitGroupExpr: *const fn (this: *anyopaque, node: *const GroupExpr) ?*anyopaque,
-        visitProtoAccess: *const fn (this: *anyopaque, node: *const ProtoAccess) ?*anyopaque,
+        visitAssign: *const fn (this: *anyopaque, node: *const Assign) anyerror!?*anyopaque,
+        visitAssignExpr: *const fn (this: *anyopaque, node: *const AssignExpr) anyerror!?*anyopaque,
+        visitLogicOr: *const fn (this: *anyopaque, node: *const LogicOr) anyerror!?*anyopaque,
+        visitLogicOrExpr: *const fn (this: *anyopaque, node: *const LogicOrExpr) anyerror!?*anyopaque,
+        visitLogicAnd: *const fn (this: *anyopaque, node: *const LogicAnd) anyerror!?*anyopaque,
+        visitLogicAndExpr: *const fn (this: *anyopaque, node: *const LogicAndExpr) anyerror!?*anyopaque,
+        visitEquality: *const fn (this: *anyopaque, node: *const Equality) anyerror!?*anyopaque,
+        visitEqualityExpr: *const fn (this: *anyopaque, node: *const EqualityExpr) anyerror!?*anyopaque,
+        visitComparison: *const fn (this: *anyopaque, node: *const Comparison) anyerror!?*anyopaque,
+        visitComparisonExpr: *const fn (this: *anyopaque, node: *const ComparisonExpr) anyerror!?*anyopaque,
+        visitTerm: *const fn (this: *anyopaque, node: *const Term) anyerror!?*anyopaque,
+        visitTermExpr: *const fn (this: *anyopaque, node: *const TermExpr) anyerror!?*anyopaque,
+        visitFactor: *const fn (this: *anyopaque, node: *const Factor) anyerror!?*anyopaque,
+        visitFactorExpr: *const fn (this: *anyopaque, node: *const FactorExpr) anyerror!?*anyopaque,
+        visitUnary: *const fn (this: *anyopaque, node: *const Unary) anyerror!?*anyopaque,
+        visitUnaryExpr: *const fn (this: *anyopaque, node: *const UnaryExpr) anyerror!?*anyopaque,
+        visitCall: *const fn (this: *anyopaque, node: *const Call) anyerror!?*anyopaque,
+        visitCallExpr: *const fn (this: *anyopaque, node: *const CallExpr) anyerror!?*anyopaque,
+        visitCallFn: *const fn (this: *anyopaque, node: *const CallFn) anyerror!?*anyopaque,
+        visitCallProperty: *const fn (this: *anyopaque, node: *const CallProperty) anyerror!?*anyopaque,
+        visitFnArg: *const fn (this: *anyopaque, node: *const FnArg) anyerror!?*anyopaque,
+        visitPrimary: *const fn (this: *anyopaque, node: *const Primary) anyerror!?*anyopaque,
+        visitGroupExpr: *const fn (this: *anyopaque, node: *const GroupExpr) anyerror!?*anyopaque,
     };
 
-    pub fn visitProgram(this: *const @This(), node: *const Program) ?*anyopaque {
+    pub fn visitProgram(this: *const @This(), node: *const Program) anyerror!?*anyopaque {
         return this.vtable.visitProgram(this.ptr, node);
     }
-    pub fn visitDecl(this: *const @This(), node: *const Decl) ?*anyopaque {
+    pub fn visitDecl(this: *const @This(), node: *const Decl) anyerror!?*anyopaque {
         return this.vtable.visitDecl(this.ptr, node);
     }
-    pub fn visitObjDecl(this: *const @This(), node: *const ObjDecl) ?*anyopaque {
+    pub fn visitObjDecl(this: *const @This(), node: *const ObjDecl) anyerror!?*anyopaque {
         return this.vtable.visitObjDecl(this.ptr, node);
     }
-    pub fn visitObjDeclExtends(this: *const @This(), node: *const ObjDeclExtends) ?*anyopaque {
+    pub fn visitObjDeclExtends(this: *const @This(), node: *const ObjDeclExtends) anyerror!?*anyopaque {
         return this.vtable.visitObjDeclExtends(this.ptr, node);
     }
-    pub fn visitFnDecl(this: *const @This(), node: *const FnDecl) ?*anyopaque {
+    pub fn visitFnDecl(this: *const @This(), node: *const FnDecl) anyerror!?*anyopaque {
         return this.vtable.visitFnDecl(this.ptr, node);
     }
-    pub fn visitFnParam(this: *const @This(), node: *const FnParam) ?*anyopaque {
+    pub fn visitFnParam(this: *const @This(), node: *const FnParam) anyerror!?*anyopaque {
         return this.vtable.visitFnParam(this.ptr, node);
     }
-    pub fn visitVarDecl(this: *const @This(), node: *const VarDecl) ?*anyopaque {
+    pub fn visitVarDecl(this: *const @This(), node: *const VarDecl) anyerror!?*anyopaque {
         return this.vtable.visitVarDecl(this.ptr, node);
     }
-    pub fn visitVarDeclInit(this: *const @This(), node: *const VarDeclInit) ?*anyopaque {
+    pub fn visitVarDeclInit(this: *const @This(), node: *const VarDeclInit) anyerror!?*anyopaque {
         return this.vtable.visitVarDeclInit(this.ptr, node);
     }
 
-    pub fn visitStmt(this: *const @This(), node: *const Stmt) ?*anyopaque {
+    pub fn visitStmt(this: *const @This(), node: *const Stmt) anyerror!?*anyopaque {
         return this.vtable.visitStmt(this.ptr, node);
     }
-    pub fn visitExprStmt(this: *const @This(), node: *const ExprStmt) ?*anyopaque {
+    pub fn visitExprStmt(this: *const @This(), node: *const ExprStmt) anyerror!?*anyopaque {
         return this.vtable.visitExprStmt(this.ptr, node);
     }
-    pub fn visitForStmt(this: *const @This(), node: *const ForStmt) ?*anyopaque {
+    pub fn visitForStmt(this: *const @This(), node: *const ForStmt) anyerror!?*anyopaque {
         return this.vtable.visitForStmt(this.ptr, node);
     }
-    pub fn visitForInit(this: *const @This(), node: *const ForInit) ?*anyopaque {
+    pub fn visitForInit(this: *const @This(), node: *const ForInit) anyerror!?*anyopaque {
         return this.vtable.visitForInit(this.ptr, node);
     }
-    pub fn visitForCond(this: *const @This(), node: *const ForCond) ?*anyopaque {
+    pub fn visitForCond(this: *const @This(), node: *const ForCond) anyerror!?*anyopaque {
         return this.vtable.visitForCond(this.ptr, node);
     }
-    pub fn visitForInc(this: *const @This(), node: *const ForInc) ?*anyopaque {
+    pub fn visitForInc(this: *const @This(), node: *const ForInc) anyerror!?*anyopaque {
         return this.vtable.visitForInc(this.ptr, node);
     }
-    pub fn visitIfStmt(this: *const @This(), node: *const IfStmt) ?*anyopaque {
+    pub fn visitIfStmt(this: *const @This(), node: *const IfStmt) anyerror!?*anyopaque {
         return this.vtable.visitIfStmt(this.ptr, node);
     }
-    pub fn visitIfElseBranch(this: *const @This(), node: *const IfElseBranch) ?*anyopaque {
+    pub fn visitIfElseBranch(this: *const @This(), node: *const IfElseBranch) anyerror!?*anyopaque {
         return this.vtable.visitIfElseBranch(this.ptr, node);
     }
-    pub fn visitPrintStmt(this: *const @This(), node: *const PrintStmt) ?*anyopaque {
+    pub fn visitPrintStmt(this: *const @This(), node: *const PrintStmt) anyerror!?*anyopaque {
         return this.vtable.visitPrintStmt(this.ptr, node);
     }
-    pub fn visitReturnStmt(this: *const @This(), node: *const ReturnStmt) ?*anyopaque {
+    pub fn visitReturnStmt(this: *const @This(), node: *const ReturnStmt) anyerror!?*anyopaque {
         return this.vtable.visitReturnStmt(this.ptr, node);
     }
-    pub fn visitWhileStmt(this: *const @This(), node: *const WhileStmt) ?*anyopaque {
+    pub fn visitWhileStmt(this: *const @This(), node: *const WhileStmt) anyerror!?*anyopaque {
         return this.vtable.visitWhileStmt(this.ptr, node);
     }
-    pub fn visitBlock(this: *const @This(), node: *const Block) ?*anyopaque {
+    pub fn visitBlock(this: *const @This(), node: *const Block) anyerror!?*anyopaque {
         return this.vtable.visitBlock(this.ptr, node);
     }
 
-    pub fn visitAssign(this: *const @This(), node: *const Assign) ?*anyopaque {
+    pub fn visitAssign(this: *const @This(), node: *const Assign) anyerror!?*anyopaque {
         return this.vtable.visitAssign(this.ptr, node);
     }
-    pub fn visitAssignExpr(this: *const @This(), node: *const AssignExpr) ?*anyopaque {
+    pub fn visitAssignExpr(this: *const @This(), node: *const AssignExpr) anyerror!?*anyopaque {
         return this.vtable.visitAssignExpr(this.ptr, node);
     }
-    pub fn visitLogicOr(this: *const @This(), node: *const LogicOr) ?*anyopaque {
+    pub fn visitLogicOr(this: *const @This(), node: *const LogicOr) anyerror!?*anyopaque {
         return this.vtable.visitLogicOr(this.ptr, node);
     }
-    pub fn visitLogicOrExpr(this: *const @This(), node: *const LogicOrExpr) ?*anyopaque {
+    pub fn visitLogicOrExpr(this: *const @This(), node: *const LogicOrExpr) anyerror!?*anyopaque {
         return this.vtable.visitLogicOrExpr(this.ptr, node);
     }
-    pub fn visitLogicAnd(this: *const @This(), node: *const LogicAnd) ?*anyopaque {
+    pub fn visitLogicAnd(this: *const @This(), node: *const LogicAnd) anyerror!?*anyopaque {
         return this.vtable.visitLogicAnd(this.ptr, node);
     }
-    pub fn visitLogicAndExpr(this: *const @This(), node: *const LogicAndExpr) ?*anyopaque {
+    pub fn visitLogicAndExpr(this: *const @This(), node: *const LogicAndExpr) anyerror!?*anyopaque {
         return this.vtable.visitLogicAndExpr(this.ptr, node);
     }
-    pub fn visitEquality(this: *const @This(), node: *const Equality) ?*anyopaque {
+    pub fn visitEquality(this: *const @This(), node: *const Equality) anyerror!?*anyopaque {
         return this.vtable.visitEquality(this.ptr, node);
     }
-    pub fn visitEqualityExpr(this: *const @This(), node: *const EqualityExpr) ?*anyopaque {
+    pub fn visitEqualityExpr(this: *const @This(), node: *const EqualityExpr) anyerror!?*anyopaque {
         return this.vtable.visitEqualityExpr(this.ptr, node);
     }
-    pub fn visitComparison(this: *const @This(), node: *const Comparison) ?*anyopaque {
+    pub fn visitComparison(this: *const @This(), node: *const Comparison) anyerror!?*anyopaque {
         return this.vtable.visitComparison(this.ptr, node);
     }
-    pub fn visitComparisonExpr(this: *const @This(), node: *const ComparisonExpr) ?*anyopaque {
+    pub fn visitComparisonExpr(this: *const @This(), node: *const ComparisonExpr) anyerror!?*anyopaque {
         return this.vtable.visitComparisonExpr(this.ptr, node);
     }
-    pub fn visitTerm(this: *const @This(), node: *const Term) ?*anyopaque {
+    pub fn visitTerm(this: *const @This(), node: *const Term) anyerror!?*anyopaque {
         return this.vtable.visitTerm(this.ptr, node);
     }
-    pub fn visitTermExpr(this: *const @This(), node: *const TermExpr) ?*anyopaque {
+    pub fn visitTermExpr(this: *const @This(), node: *const TermExpr) anyerror!?*anyopaque {
         return this.vtable.visitTermExpr(this.ptr, node);
     }
-    pub fn visitFactor(this: *const @This(), node: *const Factor) ?*anyopaque {
+    pub fn visitFactor(this: *const @This(), node: *const Factor) anyerror!?*anyopaque {
         return this.vtable.visitFactor(this.ptr, node);
     }
-    pub fn visitFactorExpr(this: *const @This(), node: *const FactorExpr) ?*anyopaque {
+    pub fn visitFactorExpr(this: *const @This(), node: *const FactorExpr) anyerror!?*anyopaque {
         return this.vtable.visitFactorExpr(this.ptr, node);
     }
-    pub fn visitUnary(this: *const @This(), node: *const Unary) ?*anyopaque {
+    pub fn visitUnary(this: *const @This(), node: *const Unary) anyerror!?*anyopaque {
         return this.vtable.visitUnary(this.ptr, node);
     }
-    pub fn visitUnaryExpr(this: *const @This(), node: *const UnaryExpr) ?*anyopaque {
+    pub fn visitUnaryExpr(this: *const @This(), node: *const UnaryExpr) anyerror!?*anyopaque {
         return this.vtable.visitUnaryExpr(this.ptr, node);
     }
-    pub fn visitCall(this: *const @This(), node: *const Call) ?*anyopaque {
+    pub fn visitCall(this: *const @This(), node: *const Call) anyerror!?*anyopaque {
         return this.vtable.visitCall(this.ptr, node);
     }
-    pub fn visitCallExpr(this: *const @This(), node: *const CallExpr) ?*anyopaque {
+    pub fn visitCallExpr(this: *const @This(), node: *const CallExpr) anyerror!?*anyopaque {
         return this.vtable.visitCallExpr(this.ptr, node);
     }
-    pub fn visitCallFn(this: *const @This(), node: *const CallFn) ?*anyopaque {
+    pub fn visitCallFn(this: *const @This(), node: *const CallFn) anyerror!?*anyopaque {
         return this.vtable.visitCallFn(this.ptr, node);
     }
-    pub fn visitCallProperty(this: *const @This(), node: *const CallProperty) ?*anyopaque {
+    pub fn visitCallProperty(this: *const @This(), node: *const CallProperty) anyerror!?*anyopaque {
         return this.vtable.visitCallProperty(this.ptr, node);
     }
-    pub fn visitFnArg(this: *const @This(), node: *const FnArg) ?*anyopaque {
+    pub fn visitFnArg(this: *const @This(), node: *const FnArg) anyerror!?*anyopaque {
         return this.vtable.visitFnArg(this.ptr, node);
     }
-    pub fn visitPrimary(this: *const @This(), node: *const Primary) ?*anyopaque {
+    pub fn visitPrimary(this: *const @This(), node: *const Primary) anyerror!?*anyopaque {
         return this.vtable.visitPrimary(this.ptr, node);
     }
-    pub fn visitGroupExpr(this: *const @This(), node: *const GroupExpr) ?*anyopaque {
+    pub fn visitGroupExpr(this: *const @This(), node: *const GroupExpr) anyerror!?*anyopaque {
         return this.vtable.visitGroupExpr(this.ptr, node);
     }
-    pub fn visitProtoAccess(this: *const @This(), node: *const ProtoAccess) ?*anyopaque {
-        return this.vtable.visitProtoAccess(this.ptr, node);
-    }
 };
 
-pub const Error = struct {
-    message: []const u8,
-    span: Token.Span,
-
-    pub fn deinit(this: *@This(), allocator: Allocator) void {
-        allocator.free(this.message);
-    }
-};
-
-tokens: *Tokenizer,
+allocator: Allocator,
+tokens: Tokenizer,
 errors: ArrayList(Error) = .empty,
 
-pub fn init(tokens: *Tokenizer) @This() {
-    return .{ .tokens = tokens };
+pub fn init(allocator: Allocator, tokens: Tokenizer) @This() {
+    return .{
+        .allocator = allocator,
+        .tokens = tokens,
+    };
 }
 
-pub fn deinit(this: *@This(), allocator: Allocator) void {
-    for (this.errors.items) |*err| err.deinit(allocator);
-    this.errors.deinit(allocator);
+pub fn parse(
+    this: *@This(),
+) !?Program {
+    return .parse(this);
 }
 
-pub fn parse(this: *@This(), allocator: Allocator) !?Program {
-    return .parse(this, allocator);
+pub fn deinit(this: *@This()) void {
+    for (this.errors.items) |*err| err.deinit(this.allocator);
+    this.errors.deinit(this.allocator);
 }
 
 pub fn reset(this: *@This(), allocator: Allocator) void {

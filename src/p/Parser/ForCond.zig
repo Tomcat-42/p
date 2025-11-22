@@ -8,16 +8,16 @@ const Parser = p.Parser;
 const VarDecl = Parser.VarDecl;
 const ExprStmt = Parser.ExprStmt;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 pub const ForCond = union(enum) {
     expr: ExprStmt,
     @";": Token, // Empty cond
 
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    pub fn parse(parser: *Parser) !?@This() {
         const lookahead = try parser.match(
-            allocator,
+            parser.allocator,
             .peek,
             .{
                 .true,
@@ -47,7 +47,7 @@ pub const ForCond = union(enum) {
             .proto,
             .@"!",
             .@"-",
-            => .{ .expr = try ExprStmt.parse(parser, allocator) orelse return null },
+            => .{ .expr = try ExprStmt.parse(parser) orelse return null },
             .@";" => .{ .@";" = parser.tokens.next().? },
             else => unreachable,
         };
@@ -60,13 +60,13 @@ pub const ForCond = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitForInit)).@"fn".return_type.? {
-        return visitor.visitForInit(this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitForCond)).@"fn".return_type.? {
+        return visitor.visitForCond(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
         return .{ .data = .{ .depth = depth, .data = this } };
     }
 
-    const Format = MakeFormat(@This());
+    const Format = TreeFormatter(@This());
 };

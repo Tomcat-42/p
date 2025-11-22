@@ -10,16 +10,16 @@ const FnDecl = Parser.FnDecl;
 const VarDecl = Parser.VarDecl;
 const Stmt = Parser.Stmt;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 
 pub const Decl = union(enum) {
-    ObjDecl: ObjDecl,
-    FnDecl: FnDecl,
-    VarDecl: VarDecl,
-    Stmt: Stmt,
+    obj_decl: ObjDecl,
+    fn_decl: FnDecl,
+    var_decl: VarDecl,
+    stmt: Stmt,
 
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const lookahead = try parser.match(allocator, .peek, .{
+    pub fn parse(parser: *Parser) !?@This() {
+        const lookahead = try parser.match(parser.allocator, .peek, .{
             .object,
             .@"fn",
             .let,
@@ -43,9 +43,9 @@ pub const Decl = union(enum) {
         }) orelse return null;
 
         return switch (lookahead.tag) {
-            .object => .{ .ObjDecl = try ObjDecl.parse(parser, allocator) orelse return null },
-            .@"fn" => .{ .FnDecl = try FnDecl.parse(parser, allocator) orelse return null },
-            .let => .{ .VarDecl = try VarDecl.parse(parser, allocator) orelse return null },
+            .object => .{ .obj_decl = try ObjDecl.parse(parser) orelse return null },
+            .@"fn" => .{ .fn_decl = try FnDecl.parse(parser) orelse return null },
+            .let => .{ .var_decl = try VarDecl.parse(parser) orelse return null },
             .true,
             .false,
             .nil,
@@ -63,7 +63,7 @@ pub const Decl = union(enum) {
             .@"return",
             .@"while",
             .@"{",
-            => .{ .Stmt = try Stmt.parse(parser, allocator) orelse return null },
+            => .{ .stmt = try Stmt.parse(parser) orelse return null },
             else => unreachable,
         };
     }
@@ -82,5 +82,5 @@ pub const Decl = union(enum) {
         return .{ .data = .{ .depth = depth, .data = this } };
     }
 
-    const Format = MakeFormat(@This());
+    const Format = TreeFormatter(@This());
 };

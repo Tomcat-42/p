@@ -24,9 +24,8 @@ pub fn reset(this: *@This()) void {
 
 pub fn next(this: *@This()) ?Token {
     if (this.pos >= this.src.len) return null;
-    defer this.pos += 1;
 
-    return dfa: switch (this.src[this.pos]) {
+    return switch (this.src[this.pos]) {
         '(' => this.token(.@"("),
         ')' => this.token(.@")"),
         '{' => this.token(.@"{"),
@@ -45,10 +44,7 @@ pub fn next(this: *@This()) ?Token {
         '"' => this.string(),
         '0'...'9' => this.number(),
         '_', 'a'...'z', 'A'...'Z' => this.keywordOrIdentifier(),
-        ' ', '\t'...'\r' => {
-            this.skipWhitespace();
-            continue :dfa this.src[this.pos];
-        },
+        ' ', '\t'...'\r' => this.skipWhitespace(),
         else => this.token(.invalid),
     };
 }
@@ -94,15 +90,18 @@ pub fn collect(this: *@This(), allocator: Allocator) ![]const Token {
     return tokens.toOwnedSlice(allocator);
 }
 
-fn token(this: *const @This(), comptime tag: Token.Tag) Token {
-    const size = @tagName(tag).len;
+fn token(this: *@This(), comptime tag: Token.Tag) Token {
+    const size = if (tag != .invalid) @tagName(tag).len else 1;
+    const begin = this.pos;
+    const end = this.pos + size;
+    this.pos = end;
 
     return .{
         .tag = tag,
-        .value = this.src[this.pos .. this.pos + size],
+        .value = this.src[begin..end],
         .span = .{
-            .begin = this.pos,
-            .end = this.pos + size,
+            .begin = begin,
+            .end = end,
         },
     };
 }
@@ -112,6 +111,7 @@ fn check(this: *@This(), char: u8) bool {
 }
 
 fn number(this: *@This()) Token {
+    const begin = this.pos;
     var idx = this.pos;
     while (idx < this.src.len and
         ascii.isDigit(this.src[idx])) : (idx += 1)
@@ -126,11 +126,11 @@ fn number(this: *@This()) Token {
         {}
     }
 
-    defer this.pos = idx - 1;
+    this.pos = idx;
     return .{
         .tag = .number,
-        .value = this.src[this.pos..idx],
-        .span = .{ .begin = this.pos, .end = idx },
+        .value = this.src[begin..idx],
+        .span = .{ .begin = begin, .end = idx },
     };
 }
 
@@ -139,11 +139,12 @@ fn string(this: *@This()) ?Token {
 
     this.pos += 1;
     while (this.pos < this.src.len) : (this.pos += 1) if (this.src[this.pos] == '"') {
-        const end = this.pos;
+        const end = this.pos + 1;
+        this.pos = end;
         return .{
             .tag = .string,
-            .value = this.src[begin .. end + 1],
-            .span = .{ .begin = begin, .end = end + 1 },
+            .value = this.src[begin..end],
+            .span = .{ .begin = begin, .end = end },
         };
     };
 
@@ -151,22 +152,24 @@ fn string(this: *@This()) ?Token {
 }
 
 fn keywordOrIdentifier(this: *@This()) Token {
+    const begin = this.pos;
     var idx = this.pos;
-    defer this.pos = idx - 1;
 
     while (idx < this.src.len and
         (ascii.isAlphanumeric(this.src[idx]) or this.src[idx] == '_')) : (idx += 1)
     {}
 
+    this.pos = idx;
     return .{
-        .value = this.src[this.pos..idx],
-        .tag = if (KEYWORDS.get(this.src[this.pos..idx])) |kw| kw else .identifier,
-        .span = .{ .begin = this.pos, .end = idx },
+        .value = this.src[begin..idx],
+        .tag = if (KEYWORDS.get(this.src[begin..idx])) |kw| kw else .identifier,
+        .span = .{ .begin = begin, .end = idx },
     };
 }
 
-fn skipWhitespace(this: *@This()) void {
+fn skipWhitespace(this: *@This()) ?Token {
     while (this.pos < this.src.len and ascii.isWhitespace(this.src[this.pos])) : (this.pos += 1) {}
+    return this.next();
 }
 
 fn commentSingle(this: *@This()) ?Token {

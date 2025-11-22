@@ -9,31 +9,31 @@ const Parser = p.Parser;
 const Comparison = Parser.Comparison;
 const EqualityExpr = Parser.EqualityExpr;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 
 first: Comparison,
-suffixes: []const EqualityExpr,
+suffixes: []EqualityExpr,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const first = try Comparison.parse(parser, allocator) orelse return null;
+pub fn parse(parser: *Parser) !?@This() {
+    const first = try Comparison.parse(parser) orelse return null;
 
     var suffixes: ArrayList(EqualityExpr) = .empty;
-    errdefer suffixes.deinit(allocator);
+    errdefer suffixes.deinit(parser.allocator);
 
     while (parser.tokens.peek()) |token| switch (token.tag) {
-        .@"==", .@"!=" => try suffixes.append(allocator, try EqualityExpr.parse(parser, allocator) orelse return null),
+        .@"==", .@"!=" => try suffixes.append(parser.allocator, try EqualityExpr.parse(parser) orelse return null),
         else => break,
     };
 
     return .{
         .first = first,
-        .suffixes = try suffixes.toOwnedSlice(allocator),
+        .suffixes = try suffixes.toOwnedSlice(parser.allocator),
     };
 }
 
 pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.first.deinit(allocator);
-    for (this.suffixes) |suffix| suffix.deinit(allocator);
+    for (this.suffixes) |*suffix| suffix.deinit(allocator);
     allocator.free(this.suffixes);
 }
 
@@ -45,4 +45,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

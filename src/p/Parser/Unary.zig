@@ -8,16 +8,15 @@ const Parser = p.Parser;
 const UnaryExpr = Parser.UnaryExpr;
 const Call = Parser.Call;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const util = @import("util");
-const Box = util.Box;
 
 pub const Unary = union(enum) {
-    unary_expr: Box(UnaryExpr),
+    unary_expr: *UnaryExpr,
     call: Call,
 
-    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-        const lookahead = try parser.match(allocator, .peek, .{
+    pub fn parse(parser: *Parser) !?@This() {
+        const lookahead = try parser.match(parser.allocator, .peek, .{
             .@"-",
             .@"!",
             .true,
@@ -32,19 +31,19 @@ pub const Unary = union(enum) {
         }) orelse return null;
 
         return switch (lookahead.tag) {
-            .@"-", .@"!" => .{ .unary_expr = try .init(allocator, try UnaryExpr.parse(parser, allocator) orelse return null) },
-            .true, .false, .nil, .this, .number, .string, .identifier, .@"(", .proto => .{ .call = try Call.parse(parser, allocator) orelse return null },
-            else => unreachable,
+            .@"-", .@"!" => .{ .unary_expr = try util.dupe(UnaryExpr, parser.allocator, try UnaryExpr.parse(parser) orelse return null) },
+            .true, .false, .nil, .this, .number, .string, .identifier, .@"(", .proto => .{ .call = try Call.parse(parser) orelse return null },
+            else => null,
         };
     }
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
         switch (this.*) {
-            .unary_expr => |box| {
-                box.value.deinit(allocator);
-                box.deinit(allocator);
+            .unary_expr => |ptr| {
+                ptr.deinit(allocator);
+                allocator.destroy(ptr);
             },
-            .call => |call| call.deinit(allocator),
+            .call => |*call| call.deinit(allocator),
         }
     }
 
@@ -56,5 +55,5 @@ pub const Unary = union(enum) {
         return .{ .data = .{ .depth = depth, .data = this } };
     }
 
-    const Format = MakeFormat(@This());
+    const Format = TreeFormatter(@This());
 };

@@ -10,7 +10,7 @@ const ForCond = Parser.ForCond;
 const ForInc = Parser.ForInc;
 const Block = Parser.Block;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 @"for": Token,
@@ -21,27 +21,27 @@ inc: ?ForInc,
 @")": Token,
 body: Block,
 
-pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
-    const @"for" = try parser.match(allocator, .consume, .{.@"for"}) orelse return null;
-    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
+pub fn parse(parser: *Parser) anyerror!?@This() {
+    const @"for" = try parser.match(parser.allocator, .consume, .{.@"for"}) orelse return null;
+    const @"(" = try parser.match(parser.allocator, .consume, .{.@"("}) orelse return null;
 
     const init = if (parser.tokens.match(.peek, .{ .let, .true, .false, .nil, .this, .number, .string, .identifier, .@"(", .proto, .@"!", .@"-", .@";" })) |_|
-        try ForInit.parse(parser, allocator) orelse return null
+        try ForInit.parse(parser) orelse return null
     else
         null;
 
     const cond = if (parser.tokens.match(.peek, .{ .true, .false, .nil, .this, .number, .string, .identifier, .@"(", .proto, .@"!", .@"-", .@";" })) |_|
-        try ForCond.parse(parser, allocator) orelse return null
+        try ForCond.parse(parser) orelse return null
     else
         null;
 
     const inc = if (parser.tokens.match(.peek, .{ .true, .false, .nil, .this, .number, .string, .identifier, .@"(", .proto, .@"!", .@"-" })) |_|
-        try ForInc.parse(parser, allocator) orelse return null
+        try ForInc.parse(parser) orelse return null
     else
         null;
 
-    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
-    const body = try Block.parse(parser, allocator) orelse return null;
+    const @")" = try parser.match(parser.allocator, .consume, .{.@")"}) orelse return null;
+    const body = try Block.parse(parser) orelse return null;
 
     return .{
         .@"for" = @"for",
@@ -69,4 +69,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

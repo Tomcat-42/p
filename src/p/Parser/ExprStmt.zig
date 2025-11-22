@@ -7,19 +7,26 @@ const p = @import("p");
 const Parser = p.Parser;
 const Expr = Parser.Expr;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 const util = @import("util");
-const Box = util.Box;
 
-expr: Box(Expr),
-@";": ?Token,
+expr: Expr,
+@";": Token,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const expr: Box(Expr) = try .init(allocator, try Expr.parse(parser, allocator) orelse return null);
-    const @";" = parser.tokens.match(.consume, .{.@";"});
+pub fn parse(parser: *Parser) !?@This() {
+    var expr = try Expr.parse(parser) orelse return null;
+    errdefer expr.deinit(parser.allocator);
 
-    return .{ .expr = expr, .@";" = @";" };
+    const @";" = try parser.match(parser.allocator, .consume, .{.@";"}) orelse {
+        expr.deinit(parser.allocator);
+        return null;
+    };
+
+    return .{
+        .expr = expr,
+        .@";" = @";",
+    };
 }
 
 pub fn deinit(this: *@This(), allocator: Allocator) void {
@@ -34,4 +41,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

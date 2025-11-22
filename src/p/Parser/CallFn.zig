@@ -8,32 +8,20 @@ const p = @import("p");
 const Parser = p.Parser;
 const FnArg = Parser.FnArg;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 @"(": Token,
 args: []FnArg,
 @")": Token,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
+pub fn parse(parser: *Parser) !?@This() {
+    const @"(" = try parser.match(parser.allocator, .consume, .{.@"("}) orelse return null;
 
     var args: ArrayList(FnArg) = .empty;
-    errdefer args.deinit(allocator);
+    errdefer args.deinit(parser.allocator);
 
-    while (try parser.match(allocator, .peek, .{
-        .true,
-        .false,
-        .nil,
-        .this,
-        .number,
-        .string,
-        .identifier,
-        .@"(",
-        .proto,
-        .@"!",
-        .@"-",
-    })) |lookahead| switch (lookahead.tag) {
+    while (parser.tokens.peek()) |lookahead| switch (lookahead.tag) {
         .true,
         .false,
         .nil,
@@ -46,15 +34,15 @@ pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
         .@"!",
         .@"-",
         => try args.append(
-            allocator,
-            try FnArg.parse(parser, allocator) orelse return null,
+            parser.allocator,
+            try FnArg.parse(parser) orelse return null,
         ),
-        else => unreachable,
+        else => break,
     };
 
-    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
+    const @")" = try parser.match(parser.allocator, .consume, .{.@")"}) orelse return null;
 
-    return .{ .@"(" = @"(", .args = try args.toOwnedSlice(allocator), .@")" = @")" };
+    return .{ .@"(" = @"(", .args = try args.toOwnedSlice(parser.allocator), .@")" = @")" };
 }
 
 pub fn deinit(this: *@This(), allocator: Allocator) void {
@@ -70,4 +58,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

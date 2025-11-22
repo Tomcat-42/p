@@ -9,7 +9,7 @@ const IfCond = Parser.IfCond;
 const IfMainBranch = Parser.IfMainBranch;
 const IfElseBranch = Parser.IfElseBranch;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 @"if": Token,
@@ -19,14 +19,14 @@ cond: IfCond,
 main_branch: IfMainBranch,
 else_branch: ?IfElseBranch,
 
-pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
-    const @"if" = try parser.match(allocator, .consume, .{.@"if"}) orelse return null;
-    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
-    const cond = try IfCond.parse(parser, allocator) orelse return null;
-    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
-    const main_branch = try IfMainBranch.parse(parser, allocator) orelse return null;
+pub fn parse(parser: *Parser) anyerror!?@This() {
+    const @"if" = try parser.match(parser.allocator, .consume, .{.@"if"}) orelse return null;
+    const @"(" = try parser.match(parser.allocator, .consume, .{.@"("}) orelse return null;
+    const cond = try IfCond.parse(parser) orelse return null;
+    const @")" = try parser.match(parser.allocator, .consume, .{.@")"}) orelse return null;
+    const main_branch = try IfMainBranch.parse(parser) orelse return null;
     const else_branch = if (parser.tokens.match(.peek, .{.@"else"})) |_|
-        try IfElseBranch.parse(parser, allocator) orelse return null
+        try IfElseBranch.parse(parser) orelse return null
     else
         null;
 
@@ -54,4 +54,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

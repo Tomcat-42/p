@@ -7,17 +7,17 @@ const p = @import("p");
 const Parser = p.Parser;
 const Expr = Parser.Expr;
 const Visitor = Parser.Visitor;
-const MakeFormat = p.util.TreeFormatter;
+const TreeFormatter = p.common.TreeFormatter;
 const Token = p.Tokenizer.Token;
 
 @"return": Token,
 expr: ?Expr,
 @";": Token,
 
-pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
-    const @"return" = try parser.match(allocator, .consume, .{.@"return"}) orelse return null;
-    const expr = try Expr.parse(parser, allocator);
-    const @";" = try parser.match(allocator, .consume, .{.@";"}) orelse return null;
+pub fn parse(parser: *Parser) !?@This() {
+    const @"return" = try parser.match(parser.allocator, .consume, .{.@"return"}) orelse return null;
+    const expr = try Expr.parse(parser);
+    const @";" = try parser.match(parser.allocator, .consume, .{.@";"}) orelse return null;
 
     return .{
         .@"return" = @"return",
@@ -38,4 +38,4 @@ pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format)
     return .{ .data = .{ .depth = depth, .data = this } };
 }
 
-const Format = MakeFormat(@This());
+const Format = TreeFormatter(@This());

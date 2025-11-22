@@ -5,6 +5,10 @@
     .minimum_zig_version = "0.16.0-dev.932+6568f0f75",
     .dependencies = .{
         .util = .{ .path = "../../util" },
+        .isocline = .{
+            .url = "git+https://github.com/allyourcodebase/isocline.git#4de8896ec339f2d8ee759d89b7f0c896fc1d5591",
+            .hash = "isocline-1.0.9-KI8xI-4KAAC69c1rDEkxhMg1GDfss0Bb2gLCSjkOHQPQ",
+        },
     },
     .paths = .{
         "build.zig",
