@@ -30,7 +30,7 @@ pub const Error = struct {
     message: []const u8,
     span: Span,
 
-    pub fn init(message: []const u8, span: Span) !@This() {
+    pub fn init(message: []const u8, span: Span) @This() {
         return .{ .message = message, .span = span };
     }
 

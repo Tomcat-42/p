@@ -3,13 +3,14 @@ const fmt = std.fmt;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
+const move = @import("util").move;
 const p = @import("p");
 const Error = p.common.Error;
 const TreeFormatter = p.common.TreeFormatter;
 const Parser = p.Parser;
-const move = @import("util").move;
 
 const AstBuilder = @import("Sema/AstBuilder.zig");
+const TypeChecker = @import("Sema/TypeChecker.zig");
 
 allocator: Allocator,
 errors: ArrayList(Error) = .empty,
@@ -19,7 +20,7 @@ pub fn init(allocator: Allocator) @This() {
 }
 
 pub fn analyze(this: *@This(), program: Parser.Program) !?Program {
-    var ast_builder: AstBuilder = .init(this.allocator);
+    var ast_builder: AstBuilder = .init(this);
 
     return try move(
         Program,
@@ -42,7 +43,7 @@ pub const Visitor = struct {
     vtable: *const VTable,
 
     pub const VTable = struct {
-        visit_program: *const fn (this: *anyopaque, node: *const Program) anyerror!anyopaque,
+        visit_program: *const fn (this: *anyopaque, node: *const Program) anyerror!*anyopaque,
 
         visit_decl: *const fn (this: *anyopaque, node: *const Decl) anyerror!*anyopaque,
         visit_obj_decl: *const fn (this: *anyopaque, node: *const *ObjDecl) anyerror!*anyopaque,

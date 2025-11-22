@@ -59,6 +59,71 @@ pub const VarDecl = @import("Parser/VarDecl.zig");
 pub const VarDeclInit = @import("Parser/VarDeclInit.zig");
 pub const WhileStmt = @import("Parser/WhileStmt.zig");
 
+allocator: Allocator,
+tokens: Tokenizer,
+errors: ArrayList(Error) = .empty,
+
+pub fn init(allocator: Allocator, tokens: Tokenizer) @This() {
+    return .{
+        .allocator = allocator,
+        .tokens = tokens,
+    };
+}
+
+pub fn parse(
+    this: *@This(),
+) !?Program {
+    return .parse(this);
+}
+
+pub fn deinit(this: *@This()) void {
+    for (this.errors.items) |*err| err.deinit(this.allocator);
+    this.errors.deinit(this.allocator);
+}
+
+pub fn reset(this: *@This(), allocator: Allocator) void {
+    this.tokens.reset();
+    this.errors.clearAndFree(allocator);
+}
+
+pub fn errs(this: *@This()) ?[]const Error {
+    if (this.errors.items.len == 0) return null;
+    return this.errors.items;
+}
+
+pub inline fn match(
+    this: *@This(),
+    allocator: Allocator,
+    comptime behaviour: @typeInfo(@TypeOf(Tokenizer.match)).@"fn".params[1].type.?,
+    comptime expected: anytype,
+) !?Token {
+    assert(@typeInfo(@TypeOf(expected)) == .@"struct");
+    assert(@typeInfo(@TypeOf(expected)).@"struct".fields.len >= 1);
+
+    if (this.tokens.match(behaviour, expected)) |token| return token;
+
+    const token = this.tokens.peek();
+    try this.errors.append(allocator, .{
+        .message = try fmt.allocPrint(allocator, "Expected {s}, got '{s}'", .{
+            comptime tokens: {
+                var message: []const u8 = "'" ++ @tagName(expected[0]) ++ "'";
+                for (1..@typeInfo(@TypeOf(expected)).@"struct".fields.len) |i| message = message ++ ", '" ++ @tagName(expected[i]) ++ "'";
+                break :tokens message;
+            },
+            if (token) |tok| @tagName(tok.tag) else "EOF",
+        }),
+        .span = if (token) |tok| .{
+            .begin = this.tokens.pos + 1,
+            .end = this.tokens.pos + tok.value.len + 1,
+        } else .{
+            .begin = this.tokens.pos,
+            .end = this.tokens.pos,
+        },
+    });
+
+    return this.tokens.sync(behaviour, expected);
+}
+
 pub const Visitor = struct {
     ptr: *anyopaque,
     vtable: VTable,
@@ -243,68 +308,3 @@ pub const Visitor = struct {
         return this.vtable.visitGroupExpr(this.ptr, node);
     }
 };
-
-allocator: Allocator,
-tokens: Tokenizer,
-errors: ArrayList(Error) = .empty,
-
-pub fn init(allocator: Allocator, tokens: Tokenizer) @This() {
-    return .{
-        .allocator = allocator,
-        .tokens = tokens,
-    };
-}
-
-pub fn parse(
-    this: *@This(),
-) !?Program {
-    return .parse(this);
-}
-
-pub fn deinit(this: *@This()) void {
-    for (this.errors.items) |*err| err.deinit(this.allocator);
-    this.errors.deinit(this.allocator);
-}
-
-pub fn reset(this: *@This(), allocator: Allocator) void {
-    this.tokens.reset();
-    this.errors.clearAndFree(allocator);
-}
-
-pub fn errs(this: *@This()) ?[]const Error {
-    if (this.errors.items.len == 0) return null;
-    return this.errors.items;
-}
-
-pub inline fn match(
-    this: *@This(),
-    allocator: Allocator,
-    comptime behaviour: @typeInfo(@TypeOf(Tokenizer.match)).@"fn".params[1].type.?,
-    comptime expected: anytype,
-) !?Token {
-    assert(@typeInfo(@TypeOf(expected)) == .@"struct");
-    assert(@typeInfo(@TypeOf(expected)).@"struct".fields.len >= 1);
-
-    if (this.tokens.match(behaviour, expected)) |token| return token;
-
-    const token = this.tokens.peek();
-    try this.errors.append(allocator, .{
-        .message = try fmt.allocPrint(allocator, "Expected {s}, got '{s}'", .{
-            comptime tokens: {
-                var message: []const u8 = "'" ++ @tagName(expected[0]) ++ "'";
-                for (1..@typeInfo(@TypeOf(expected)).@"struct".fields.len) |i| message = message ++ ", '" ++ @tagName(expected[i]) ++ "'";
-                break :tokens message;
-            },
-            if (token) |tok| @tagName(tok.tag) else "EOF",
-        }),
-        .span = if (token) |tok| .{
-            .begin = this.tokens.pos + 1,
-            .end = this.tokens.pos + tok.value.len + 1,
-        } else .{
-            .begin = this.tokens.pos,
-            .end = this.tokens.pos,
-        },
-    });
-
-    return this.tokens.sync(behaviour, expected);
-}

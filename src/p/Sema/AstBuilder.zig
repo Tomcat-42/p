@@ -8,12 +8,13 @@ const move = @import("util").move;
 const p = @import("p");
 const Parser = p.Parser;
 const Sema = p.Sema;
+const Error = p.common.Error;
 const steal = @import("util").steal;
 
-allocator: Allocator,
+sema: *Sema,
 
-pub fn init(allocator: Allocator) @This() {
-    return .{ .allocator = allocator };
+pub fn init(sema: *Sema) @This() {
+    return .{ .sema = sema };
 }
 
 pub fn visitor(this: *@This()) Parser.Visitor {
@@ -73,17 +74,17 @@ fn visitProgram(this: *anyopaque, node: *const Parser.Program) anyerror!?*anyopa
     const builder: *@This() = @ptrCast(@alignCast(this));
 
     var decls: ArrayList(Sema.Decl) = .empty;
-    defer decls.deinit(builder.allocator);
+    defer decls.deinit(builder.sema.allocator);
 
-    try decls.ensureTotalCapacity(builder.allocator, node.decls.len);
+    try decls.ensureTotalCapacity(builder.sema.allocator, node.decls.len);
     for (node.decls) |*pdecl| decls.appendAssumeCapacity(try move(
         Sema.Decl,
-        builder.allocator,
+        builder.sema.allocator,
         @ptrCast(@alignCast(try pdecl.visit(builder.visitor()) orelse return null)),
     ));
 
-    return try dupe(Sema.Program, builder.allocator, .{
-        .decls = try decls.toOwnedSlice(builder.allocator),
+    return try dupe(Sema.Program, builder.sema.allocator, .{
+        .decls = try decls.toOwnedSlice(builder.sema.allocator),
     });
 }
 
@@ -96,11 +97,11 @@ fn visitDecl(this: *anyopaque, node: *const Parser.Decl) anyerror!?*anyopaque {
         .var_decl => |*var_decl| try var_decl.visit(builder.visitor()),
         .stmt => |*stmt| try dupe(
             Sema.Decl,
-            builder.allocator,
+            builder.sema.allocator,
             .{
                 .stmt = try move(
                     Sema.Stmt,
-                    builder.allocator,
+                    builder.sema.allocator,
                     @ptrCast(@alignCast(try stmt.visit(builder.visitor()) orelse return null)),
                 ),
             },
@@ -111,13 +112,13 @@ fn visitDecl(this: *anyopaque, node: *const Parser.Decl) anyerror!?*anyopaque {
 fn visitObjDecl(this: *anyopaque, node: *const Parser.ObjDecl) anyerror!?*anyopaque {
     const builder: *@This() = @ptrCast(@alignCast(this));
 
-    return try dupe(Sema.Decl, builder.allocator, .{
+    return try dupe(Sema.Decl, builder.sema.allocator, .{
         .obj = .{
             .name = node.id.value,
             .parent = if (node.extends) |extends| extends.id.value else null,
             .body = try move(
                 Sema.Program,
-                builder.allocator,
+                builder.sema.allocator,
                 @ptrCast(
                     @alignCast(try node.body.program.visit(builder.visitor()) orelse return null),
                 ),
@@ -134,16 +135,16 @@ fn visitFnDecl(this: *anyopaque, node: *const Parser.FnDecl) anyerror!?*anyopaqu
     const builder: *@This() = @ptrCast(@alignCast(this));
 
     var params: ArrayList([]const u8) = .empty;
-    defer params.deinit(builder.allocator);
+    defer params.deinit(builder.sema.allocator);
 
-    try params.ensureTotalCapacity(builder.allocator, node.params.len);
+    try params.ensureTotalCapacity(builder.sema.allocator, node.params.len);
     for (node.params) |param| params.appendAssumeCapacity(param.id.value);
 
-    return try dupe(Sema.Decl, builder.allocator, .{
+    return try dupe(Sema.Decl, builder.sema.allocator, .{
         .func = .{
             .name = node.id.value,
-            .params = try params.toOwnedSlice(builder.allocator),
-            .body = try move(Sema.Program, builder.allocator, @ptrCast(
+            .params = try params.toOwnedSlice(builder.sema.allocator),
+            .body = try move(Sema.Program, builder.sema.allocator, @ptrCast(
                 @alignCast(try node.body.program.visit(builder.visitor()) orelse return null),
             )),
         },
@@ -159,13 +160,13 @@ fn visitVarDecl(this: *anyopaque, node: *const Parser.VarDecl) anyerror!?*anyopa
 
     return try dupe(
         Sema.Decl,
-        builder.allocator,
+        builder.sema.allocator,
         .{
             .variable = .{
                 .name = node.id.value,
                 .init = if (node.init) |ini| try move(
                     Sema.Expr,
-                    builder.allocator,
+                    builder.sema.allocator,
                     @ptrCast(@alignCast(try ini.expr.visit(builder.visitor()) orelse return null)),
                 ) else null,
             },
@@ -194,10 +195,10 @@ fn visitStmt(this: *anyopaque, node: *const Parser.Stmt) anyerror!?*anyopaque {
 fn visitExprStmt(this: *anyopaque, node: *const Parser.ExprStmt) anyerror!?*anyopaque {
     const builder: *@This() = @ptrCast(@alignCast(this));
 
-    return try dupe(Sema.Stmt, builder.allocator, .{
+    return try dupe(Sema.Stmt, builder.sema.allocator, .{
         .expr = try move(
             Sema.Expr,
-            builder.allocator,
+            builder.sema.allocator,
             @ptrCast(@alignCast(try node.expr.visit(builder.visitor()) orelse return null)),
         ),
     });
@@ -206,11 +207,11 @@ fn visitExprStmt(this: *anyopaque, node: *const Parser.ExprStmt) anyerror!?*anyo
 fn visitForStmt(this: *anyopaque, node: *const Parser.ForStmt) anyerror!?*anyopaque {
     const builder: *@This() = @ptrCast(@alignCast(this));
 
-    return try dupe(Sema.Stmt, builder.allocator, .{
+    return try dupe(Sema.Stmt, builder.sema.allocator, .{
         .@"for" = .{
             .init = init: {
                 if (node.init) |*i| if (try i.visit(builder.visitor())) |res|
-                    break :init try move(Sema.ForStmt.Init, builder.allocator, @ptrCast(@alignCast(res)));
+                    break :init try move(Sema.ForStmt.Init, builder.sema.allocator, @ptrCast(@alignCast(res)));
                 break :init null;
             },
             .condition = cond: {
@@ -237,19 +238,19 @@ fn visitForStmt(this: *anyopaque, node: *const Parser.ForStmt) anyerror!?*anyopa
 fn visitForInit(this: *anyopaque, node: *const Parser.ForInit) anyerror!?*anyopaque {
     const builder: *@This() = @ptrCast(@alignCast(this));
 
-    return try dupe(Sema.ForStmt.Init, builder.allocator, switch (node.*) {
+    return try dupe(Sema.ForStmt.Init, builder.sema.allocator, switch (node.*) {
         .@";" => return null,
         .var_decl => |*var_decl| .{
             .variable = (try move(
                 Sema.Decl,
-                builder.allocator,
+                builder.sema.allocator,
                 @ptrCast(@alignCast(try var_decl.visit(builder.visitor()) orelse return null)),
             )).variable,
         },
         .expr => |*expr_stmt| .{
             .expr = try move(
                 Sema.Expr,
-                builder.allocator,
+                builder.sema.allocator,
                 @ptrCast(@alignCast(try expr_stmt.expr.visit(builder.visitor()) orelse return null)),
             ),
         },
@@ -270,7 +271,7 @@ fn visitForInc(this: *anyopaque, node: *const Parser.ForInc) anyerror!?*anyopaqu
 fn visitIfStmt(this: *anyopaque, node: *const Parser.IfStmt) anyerror!?*anyopaque {
     const builder: *@This() = @ptrCast(@alignCast(this));
 
-    return try dupe(Sema.Stmt, builder.allocator, .{
+    return try dupe(Sema.Stmt, builder.sema.allocator, .{
         .@"if" = .{
             .condition = @ptrCast(@alignCast(try node.cond.visit(builder.visitor()) orelse return null)),
             .then_branch = @ptrCast(@alignCast(try node.main_branch.visit(builder.visitor()) orelse return null)),
@@ -290,9 +291,9 @@ fn visitPrintStmt(this: *anyopaque, node: *const Parser.PrintStmt) anyerror!?*an
     const builder: *@This() = @ptrCast(@alignCast(this));
 
     const expr: *Sema.Expr = @ptrCast(@alignCast(try node.expr.visit(builder.visitor()) orelse return null));
-    defer builder.allocator.destroy(expr);
+    defer builder.sema.allocator.destroy(expr);
 
-    return try dupe(Sema.Stmt, builder.allocator, .{
+    return try dupe(Sema.Stmt, builder.sema.allocator, .{
         .print = expr.*,
     });
 }
@@ -300,10 +301,10 @@ fn visitPrintStmt(this: *anyopaque, node: *const Parser.PrintStmt) anyerror!?*an
 fn visitReturnStmt(this: *anyopaque, node: *const Parser.ReturnStmt) anyerror!?*anyopaque {
     const builder: *@This() = @ptrCast(@alignCast(this));
 
-    return try dupe(Sema.Stmt, builder.allocator, .{
+    return try dupe(Sema.Stmt, builder.sema.allocator, .{
         .@"return" = if (node.expr) |*expr| blk: {
             const expr_ptr: *Sema.Expr = @ptrCast(@alignCast(try expr.visit(builder.visitor()) orelse return null));
-            defer builder.allocator.destroy(expr_ptr);
+            defer builder.sema.allocator.destroy(expr_ptr);
             break :blk expr_ptr.*;
         } else null,
     });
@@ -312,7 +313,7 @@ fn visitReturnStmt(this: *anyopaque, node: *const Parser.ReturnStmt) anyerror!?*
 fn visitWhileStmt(this: *anyopaque, node: *const Parser.WhileStmt) anyerror!?*anyopaque {
     const builder: *@This() = @ptrCast(@alignCast(this));
 
-    return try dupe(Sema.Stmt, builder.allocator, .{
+    return try dupe(Sema.Stmt, builder.sema.allocator, .{
         .@"while" = .{
             .condition = @ptrCast(@alignCast(try node.cond.visit(builder.visitor()) orelse return null)),
             .body = @ptrCast(@alignCast(try node.body.visit(builder.visitor()) orelse return null)),
@@ -323,10 +324,10 @@ fn visitWhileStmt(this: *anyopaque, node: *const Parser.WhileStmt) anyerror!?*an
 fn visitBlock(this: *anyopaque, node: *const Parser.Block) anyerror!?*anyopaque {
     const builder: *@This() = @ptrCast(@alignCast(this));
 
-    return try dupe(Sema.Stmt, builder.allocator, .{
+    return try dupe(Sema.Stmt, builder.sema.allocator, .{
         .block = try move(
             Sema.Program,
-            builder.allocator,
+            builder.sema.allocator,
             @ptrCast(@alignCast(try node.program.visit(builder.visitor()) orelse return null)),
         ),
     });
@@ -339,7 +340,7 @@ fn visitAssign(this: *anyopaque, node: *const Parser.Assign) anyerror!?*anyopaqu
 
     if (node.assign_expr) |assign_expr| {
         const value: *Sema.Expr = @ptrCast(@alignCast(try visitAssignExpr(this, assign_expr) orelse return null));
-        return try dupe(Sema.Expr, builder.allocator, .{
+        return try dupe(Sema.Expr, builder.sema.allocator, .{
             .assign = .{
                 .target = target,
                 .value = value,
@@ -361,7 +362,7 @@ fn visitLogicOr(this: *anyopaque, node: *const Parser.LogicOr) anyerror!?*anyopa
 
     for (node.suffixes) |*suffix| {
         const right: *Sema.Expr = @ptrCast(@alignCast(try suffix.logic_and.visit(builder.visitor()) orelse return null));
-        current = try dupe(Sema.Expr, builder.allocator, .{
+        current = try dupe(Sema.Expr, builder.sema.allocator, .{
             .binary = .{
                 .left = current,
                 .op = .@"or",
@@ -387,7 +388,7 @@ fn visitLogicAnd(this: *anyopaque, node: *const Parser.LogicAnd) anyerror!?*anyo
 
     for (node.suffixes) |*suffix| {
         const right: *Sema.Expr = @ptrCast(@alignCast(try suffix.equality.visit(builder.visitor()) orelse return null));
-        current = try dupe(Sema.Expr, builder.allocator, .{
+        current = try dupe(Sema.Expr, builder.sema.allocator, .{
             .binary = .{
                 .left = current,
                 .op = .@"and",
@@ -410,7 +411,7 @@ fn visitEquality(this: *anyopaque, node: *const Parser.Equality) anyerror!?*anyo
 
     for (node.suffixes) |*suffix| {
         const right: *Sema.Expr = @ptrCast(@alignCast(try suffix.comparison.visit(builder.visitor()) orelse return null));
-        current = try dupe(Sema.Expr, builder.allocator, .{
+        current = try dupe(Sema.Expr, builder.sema.allocator, .{
             .binary = .{
                 .left = current,
                 .op = switch (suffix.op.tag) {
@@ -437,7 +438,7 @@ fn visitComparison(this: *anyopaque, node: *const Parser.Comparison) anyerror!?*
 
     for (node.suffixes) |*suffix| {
         const right: *Sema.Expr = @ptrCast(@alignCast(try suffix.term.visit(builder.visitor()) orelse return null));
-        current = try dupe(Sema.Expr, builder.allocator, .{
+        current = try dupe(Sema.Expr, builder.sema.allocator, .{
             .binary = .{
                 .left = current,
                 .op = switch (suffix.op.tag) {
@@ -466,7 +467,7 @@ fn visitTerm(this: *anyopaque, node: *const Parser.Term) anyerror!?*anyopaque {
 
     for (node.suffixes) |*suffix| {
         const right: *Sema.Expr = @ptrCast(@alignCast(try suffix.factor.visit(builder.visitor()) orelse return null));
-        current = try dupe(Sema.Expr, builder.allocator, .{
+        current = try dupe(Sema.Expr, builder.sema.allocator, .{
             .binary = .{
                 .left = current,
                 .op = switch (suffix.op.tag) {
@@ -493,7 +494,7 @@ fn visitFactor(this: *anyopaque, node: *const Parser.Factor) anyerror!?*anyopaqu
 
     for (node.suffixes) |*suffix| {
         const right: *Sema.Expr = @ptrCast(@alignCast(try suffix.unary.visit(builder.visitor()) orelse return null));
-        current = try dupe(Sema.Expr, builder.allocator, .{
+        current = try dupe(Sema.Expr, builder.sema.allocator, .{
             .binary = .{
                 .left = current,
                 .op = switch (suffix.op.tag) {
@@ -525,7 +526,7 @@ fn visitUnary(this: *anyopaque, node: *const Parser.Unary) anyerror!?*anyopaque 
 fn visitUnaryExpr(this: *anyopaque, node: *const Parser.UnaryExpr) anyerror!?*anyopaque {
     const builder: *@This() = @ptrCast(@alignCast(this));
 
-    return try dupe(Sema.Expr, builder.allocator, .{
+    return try dupe(Sema.Expr, builder.sema.allocator, .{
         .unary = .{
             .op = switch (node.op.tag) {
                 .@"-" => .@"-",
@@ -545,19 +546,19 @@ fn visitCall(this: *anyopaque, node: *const Parser.Call) anyerror!?*anyopaque {
     for (node.calls) |*call_expr| {
         current_expr = switch (call_expr.*) {
             .call_fn => |*call_fn| blk: {
-                const args = try builder.allocator.alloc(*Sema.Expr, call_fn.args.len);
+                const args = try builder.sema.allocator.alloc(*Sema.Expr, call_fn.args.len);
                 for (call_fn.args, 0..) |*arg, i| {
                     args[i] = @ptrCast(@alignCast(try arg.visit(builder.visitor()) orelse return null));
                 }
 
-                break :blk try dupe(Sema.Expr, builder.allocator, .{
+                break :blk try dupe(Sema.Expr, builder.sema.allocator, .{
                     .call = .{
                         .callee = current_expr,
                         .args = args,
                     },
                 });
             },
-            .call_property => |*prop| try dupe(Sema.Expr, builder.allocator, .{
+            .call_property => |*prop| try dupe(Sema.Expr, builder.sema.allocator, .{
                 .property = .{
                     .object = current_expr,
                     .name = prop.id.value,
@@ -580,7 +581,7 @@ fn visitCallFn(_: *anyopaque, _: *const Parser.CallFn) anyerror!?*anyopaque {
 fn visitCallProperty(this: *anyopaque, node: *const Parser.CallProperty) anyerror!?*anyopaque {
     const builder: *@This() = @ptrCast(@alignCast(this));
 
-    return try dupe(Sema.Expr, builder.allocator, .{ .identifier = node.id.value });
+    return try dupe(Sema.Expr, builder.sema.allocator, .{ .identifier = node.id.value });
 }
 
 fn visitFnArg(this: *anyopaque, node: *const Parser.FnArg) anyerror!?*anyopaque {
@@ -591,16 +592,26 @@ fn visitPrimary(this: *anyopaque, node: *const Parser.Primary) anyerror!?*anyopa
     const builder: *@This() = @ptrCast(@alignCast(this));
 
     return switch (node.*) {
-        .nil => try dupe(Sema.Expr, builder.allocator, .nil),
-        .this => try dupe(Sema.Expr, builder.allocator, .this),
-        .proto => try dupe(Sema.Expr, builder.allocator, .proto),
-        .true => try dupe(Sema.Expr, builder.allocator, .{ .bool = true }),
-        .false => try dupe(Sema.Expr, builder.allocator, .{ .bool = false }),
-        .number => |token| try dupe(Sema.Expr, builder.allocator, .{
-            .number = std.fmt.parseFloat(f64, token.value) catch unreachable,
+        .nil => try dupe(Sema.Expr, builder.sema.allocator, .nil),
+        .this => try dupe(Sema.Expr, builder.sema.allocator, .this),
+        .proto => try dupe(Sema.Expr, builder.sema.allocator, .proto),
+        .true => try dupe(Sema.Expr, builder.sema.allocator, .{ .bool = true }),
+        .false => try dupe(Sema.Expr, builder.sema.allocator, .{ .bool = false }),
+        .number => |token| try dupe(Sema.Expr, builder.sema.allocator, .{
+            .number = std.fmt.parseFloat(f64, token.value) catch {
+                try builder.sema.errors.append(
+                    builder.sema.allocator,
+                    Error.init(try fmt.allocPrint(
+                        builder.sema.allocator,
+                        "Invalid number literal: '{}'",
+                        .{token.value},
+                    ), token.span),
+                );
+                return null;
+            },
         }),
-        .string => |token| try dupe(Sema.Expr, builder.allocator, .{ .string = token.value }),
-        .id => |token| try dupe(Sema.Expr, builder.allocator, .{ .identifier = token.value }),
+        .string => |token| try dupe(Sema.Expr, builder.sema.allocator, .{ .string = token.value }),
+        .id => |token| try dupe(Sema.Expr, builder.sema.allocator, .{ .identifier = token.value }),
         .group_expr => |*group| try group.expr.visit(builder.visitor()) orelse return null,
     };
 }
