@@ -12,9 +12,9 @@ const Token = p.Tokenizer.Token;
 id: Token,
 @",": ?Token,
 
-pub fn parse(parser: *Parser) !?@This() {
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
     const id = try parser.match(
-        parser.allocator,
+        allocator,
         .consume,
         .{.identifier},
     ) orelse return null;
@@ -23,8 +23,8 @@ pub fn parse(parser: *Parser) !?@This() {
     return .{ .id = id, .@"," = @"," };
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_fn_param)).@"fn".return_type.? {
-    return visitor.visit_fn_param(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_fn_param)).@"fn".return_type.? {
+    return visitor.visit_fn_param(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

@@ -12,17 +12,17 @@ const Token = p.Tokenizer.Token;
 @".": Token,
 id: Token,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const @"." = try parser.match(parser.allocator, .consume, .{.@"."}) orelse return null;
-    const id = try parser.match(parser.allocator, .consume, .{.identifier}) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const @"." = try parser.match(allocator, .consume, .{.@"."}) orelse return null;
+    const id = try parser.match(allocator, .consume, .{.identifier}) orelse return null;
 
     return .{ .@"." = @".", .id = id };
 }
 
 pub fn deinit(_: *@This(), _: Allocator) void {}
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_callProperty)).@"fn".return_type.? {
-    return visitor.visit_callProperty(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_callProperty)).@"fn".return_type.? {
+    return visitor.visit_callProperty(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

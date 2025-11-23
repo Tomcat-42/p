@@ -12,17 +12,17 @@ const Token = p.Tokenizer.Token;
 extends: Token,
 id: Token,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const extends = try parser.match(parser.allocator, .consume, .{.extends}) orelse return null;
-    const id = try parser.match(parser.allocator, .consume, .{.identifier}) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const extends = try parser.match(allocator, .consume, .{.extends}) orelse return null;
+    const id = try parser.match(allocator, .consume, .{.identifier}) orelse return null;
 
     return .{ .extends = extends, .id = id };
 }
 
 pub fn deinit(_: *@This(), _: Allocator) void {}
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_obj_declExtends)).@"fn".return_type.? {
-    visitor.visit_obj_declExtends(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_obj_declExtends)).@"fn".return_type.? {
+    visitor.visit_obj_declExtends(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

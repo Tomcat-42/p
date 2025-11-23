@@ -21,9 +21,9 @@ pub const Primary = union(enum) {
     group_expr: PrimaryGroupExpr,
     proto: Token,
 
-    pub fn parse(parser: *Parser) !?@This() {
+    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
         const lookahead = try parser.match(
-            parser.allocator,
+            allocator,
             .peek,
             .{
                 .true,
@@ -46,7 +46,7 @@ pub const Primary = union(enum) {
             .number => .{ .number = parser.tokens.next().? },
             .string => .{ .string = parser.tokens.next().? },
             .identifier => .{ .id = parser.tokens.next().? },
-            .@"(" => .{ .group_expr = try PrimaryGroupExpr.parse(parser) orelse return null },
+            .@"(" => .{ .group_expr = try PrimaryGroupExpr.parse(parser, allocator) orelse return null },
             .proto => .{ .proto = parser.tokens.next().? },
             else => unreachable,
         };
@@ -59,8 +59,8 @@ pub const Primary = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_primary)).@"fn".return_type.? {
-        return visitor.visit_primary(this);
+    pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_primary)).@"fn".return_type.? {
+        return visitor.visit_primary(allocator, this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

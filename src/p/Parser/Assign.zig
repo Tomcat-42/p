@@ -14,16 +14,16 @@ const util = @import("util");
 logic_or: *LogicOr,
 assign_expr: ?*AssignExpr = null,
 
-pub fn parse(parser: *Parser) anyerror!?@This() {
-    const logic_or = try LogicOr.parse(parser) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
+    const logic_or = try LogicOr.parse(parser, allocator) orelse return null;
     const assign_expr: ?AssignExpr = if (parser.tokens.match(.peek, .{.@"="})) |_|
-        try AssignExpr.parse(parser) orelse return null
+        try AssignExpr.parse(parser, allocator) orelse return null
     else
         null;
 
     return .{
-        .logic_or = try util.dupe(LogicOr, parser.allocator, logic_or),
-        .assign_expr = if (assign_expr) |ae| try util.dupe(AssignExpr, parser.allocator, ae) else null,
+        .logic_or = try util.dupe(LogicOr, allocator, logic_or),
+        .assign_expr = if (assign_expr) |ae| try util.dupe(AssignExpr, allocator, ae) else null,
     };
 }
 
@@ -37,8 +37,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     }
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_assign)).@"fn".return_type.? {
-    return visitor.visit_assign(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_assign)).@"fn".return_type.? {
+    return visitor.visit_assign(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

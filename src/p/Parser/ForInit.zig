@@ -16,9 +16,9 @@ pub const ForInit = union(enum) {
     expr: ExprStmt,
     @";": Token, // Empty init
 
-    pub fn parse(parser: *Parser) !?@This() {
+    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
         const lookahead = try parser.match(
-            parser.allocator,
+            allocator,
             .peek,
             .{
                 .let,
@@ -38,7 +38,7 @@ pub const ForInit = union(enum) {
         ) orelse return null;
 
         return switch (lookahead.tag) {
-            .let => .{ .var_decl = try VarDecl.parse(parser) orelse return null },
+            .let => .{ .var_decl = try VarDecl.parse(parser, allocator) orelse return null },
             .true,
             .false,
             .nil,
@@ -50,7 +50,7 @@ pub const ForInit = union(enum) {
             .proto,
             .@"!",
             .@"-",
-            => .{ .expr = try ExprStmt.parse(parser) orelse return null },
+            => .{ .expr = try ExprStmt.parse(parser, allocator) orelse return null },
             .@";" => .{ .@";" = parser.tokens.next().? },
             else => unreachable,
         };
@@ -63,8 +63,8 @@ pub const ForInit = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_for_init)).@"fn".return_type.? {
-        return visitor.visit_for_init(this);
+    pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_for_init)).@"fn".return_type.? {
+        return visitor.visit_for_init(allocator, this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

@@ -14,10 +14,10 @@ const Token = p.Tokenizer.Token;
 expr: Expr,
 @")": Token,
 
-pub fn parse(parser: *Parser) anyerror!?@This() {
-    const @"(" = try parser.match(parser.allocator, .consume, .{.@"("}) orelse return null;
-    const expr = try Expr.parse(parser) orelse return null;
-    const @")" = try parser.match(parser.allocator, .consume, .{.@")"}) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
+    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
+    const expr = try Expr.parse(parser, allocator) orelse return null;
+    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
 
     return .{ .@"(" = @"(", .expr = expr, .@")" = @")" };
 }
@@ -26,8 +26,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.expr.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_group_expr)).@"fn".return_type.? {
-    return visitor.visit_group_expr(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_group_expr)).@"fn".return_type.? {
+    return visitor.visit_group_expr(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

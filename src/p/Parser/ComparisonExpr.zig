@@ -13,9 +13,9 @@ const Token = p.Tokenizer.Token;
 op: Token,
 term: Term,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const op = try parser.match(parser.allocator, .consume, .{ .@">", .@">=", .@"<", .@"<=" }) orelse return null;
-    const term = try Term.parse(parser) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const op = try parser.match(allocator, .consume, .{ .@">", .@">=", .@"<", .@"<=" }) orelse return null;
+    const term = try Term.parse(parser, allocator) orelse return null;
 
     return .{ .op = op, .term = term };
 }
@@ -24,8 +24,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.term.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_comparisonSuffix)).@"fn".return_type.? {
-    return visitor.visit_comparisonSuffix(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_comparisonSuffix)).@"fn".return_type.? {
+    return visitor.visit_comparisonSuffix(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

@@ -15,9 +15,9 @@ pub const ForCond = union(enum) {
     expr: ExprStmt,
     @";": Token, // Empty cond
 
-    pub fn parse(parser: *Parser) !?@This() {
+    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
         const lookahead = try parser.match(
-            parser.allocator,
+            allocator,
             .peek,
             .{
                 .true,
@@ -47,7 +47,7 @@ pub const ForCond = union(enum) {
             .proto,
             .@"!",
             .@"-",
-            => .{ .expr = try ExprStmt.parse(parser) orelse return null },
+            => .{ .expr = try ExprStmt.parse(parser, allocator) orelse return null },
             .@";" => .{ .@";" = parser.tokens.next().? },
             else => unreachable,
         };
@@ -60,8 +60,8 @@ pub const ForCond = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_for_cond)).@"fn".return_type.? {
-        return visitor.visit_for_cond(this);
+    pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_for_cond)).@"fn".return_type.? {
+        return visitor.visit_for_cond(allocator, this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

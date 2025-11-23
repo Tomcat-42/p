@@ -13,9 +13,9 @@ const Token = p.Tokenizer.Token;
 @"=": Token,
 expr: Expr,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const @"=" = try parser.match(parser.allocator, .consume, .{.@"="}) orelse return null;
-    const value = try Expr.parse(parser) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const @"=" = try parser.match(allocator, .consume, .{.@"="}) orelse return null;
+    const value = try Expr.parse(parser, allocator) orelse return null;
 
     return .{ .@"=" = @"=", .expr = value };
 }
@@ -24,8 +24,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.expr.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_assign)).@"fn".return_type.? {
-    return visitor.visit_assignExpr(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_assign_expr)).@"fn".return_type.? {
+    return visitor.visit_assign_expr(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

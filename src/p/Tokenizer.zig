@@ -11,7 +11,7 @@ const ArrayList = std.ArrayList;
 
 pub const Token = @import("Tokenizer/Token.zig");
 
-src: []const u8,
+src: []const u8 = "",
 pos: usize = 0,
 
 pub fn init(src: []const u8) @This() {
@@ -106,7 +106,7 @@ fn token(this: *@This(), comptime tag: Token.Tag) Token {
     };
 }
 
-fn check(this: *@This(), char: u8) bool {
+fn check(this: *const @This(), char: u8) bool {
     return this.pos + 1 < this.src.len and this.src[this.pos + 1] == char;
 }
 

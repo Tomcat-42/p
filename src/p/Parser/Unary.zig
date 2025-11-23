@@ -15,8 +15,8 @@ pub const Unary = union(enum) {
     unary_expr: *UnaryExpr,
     call: Call,
 
-    pub fn parse(parser: *Parser) !?@This() {
-        const lookahead = try parser.match(parser.allocator, .peek, .{
+    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+        const lookahead = try parser.match(allocator, .peek, .{
             .@"-",
             .@"!",
             .true,
@@ -31,8 +31,8 @@ pub const Unary = union(enum) {
         }) orelse return null;
 
         return switch (lookahead.tag) {
-            .@"-", .@"!" => .{ .unary_expr = try util.dupe(UnaryExpr, parser.allocator, try UnaryExpr.parse(parser) orelse return null) },
-            .true, .false, .nil, .this, .number, .string, .identifier, .@"(", .proto => .{ .call = try Call.parse(parser) orelse return null },
+            .@"-", .@"!" => .{ .unary_expr = try util.dupe(UnaryExpr, allocator, try UnaryExpr.parse(parser, allocator) orelse return null) },
+            .true, .false, .nil, .this, .number, .string, .identifier, .@"(", .proto => .{ .call = try Call.parse(parser, allocator) orelse return null },
             else => null,
         };
     }
@@ -47,8 +47,8 @@ pub const Unary = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_unary)).@"fn".return_type.? {
-        return visitor.visit_unary(this);
+    pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_unary)).@"fn".return_type.? {
+        return visitor.visit_unary(allocator, this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

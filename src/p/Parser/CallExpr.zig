@@ -14,12 +14,12 @@ pub const CallExpr = union(enum) {
     call_fn: CallFn,
     call_property: CallProperty,
 
-    pub fn parse(parser: *Parser) !?@This() {
+    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
         const lookahead = parser.tokens.peek() orelse return null;
 
         return switch (lookahead.tag) {
-            .@"(" => .{ .call_fn = try CallFn.parse(parser) orelse return null },
-            .@"." => .{ .call_property = try CallProperty.parse(parser) orelse return null },
+            .@"(" => .{ .call_fn = try CallFn.parse(parser, allocator) orelse return null },
+            .@"." => .{ .call_property = try CallProperty.parse(parser, allocator) orelse return null },
             else => null,
         };
     }
@@ -30,8 +30,8 @@ pub const CallExpr = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_callExpr)).@"fn".return_type.? {
-        return visitor.visit_callExpr(this);
+    pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_callExpr)).@"fn".return_type.? {
+        return visitor.visit_callExpr(allocator, this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

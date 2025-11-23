@@ -44,10 +44,10 @@ const Repl = struct {
         while (tokens.next()) |tok|
             log.debug("\n{f}", .{tok.format(0)});
 
-        var parser: Parser = .init(allocator, .init(code));
-        defer parser.deinit();
+        var parser: Parser = .init(.init(code));
+        defer parser.deinit(allocator);
 
-        var cst = if (try parser.parse()) |cst| cst else {
+        var cst = if (try parser.parse(allocator)) |cst| cst else {
             if (parser.errs()) |errors| try this.reportErrors(errors);
             return null;
         };
@@ -55,10 +55,10 @@ const Repl = struct {
 
         log.debug("\n{f}\n", .{cst.format(0)});
 
-        var sema: Sema = .init(allocator);
-        defer sema.deinit();
+        var sema: Sema = .{};
+        defer sema.deinit(allocator);
 
-        var ast = if (try sema.analyze(cst)) |ast| ast else {
+        var ast = if (try sema.analyze(allocator, cst)) |ast| ast else {
             if (sema.errs()) |errors| try this.reportErrors(errors);
             return null;
         };

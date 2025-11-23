@@ -13,9 +13,9 @@ const Token = p.Tokenizer.Token;
 op: Token,
 logic_and: LogicAnd,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const op = try parser.match(parser.allocator, .consume, .{.@"and"}) orelse return null;
-    const logic_and = try LogicAnd.parse(parser) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const op = try parser.match(allocator, .consume, .{.@"and"}) orelse return null;
+    const logic_and = try LogicAnd.parse(parser, allocator) orelse return null;
 
     return .{ .op = op, .logic_and = logic_and };
 }
@@ -24,8 +24,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.logic_and.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_logic_orExpr)).@"fn".return_type.? {
-    return visitor.visit_logic_orExpr(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_logic_orExpr)).@"fn".return_type.? {
+    return visitor.visit_logic_orExpr(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

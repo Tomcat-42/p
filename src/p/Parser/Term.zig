@@ -14,20 +14,20 @@ const TreeFormatter = p.common.TreeFormatter;
 first: Factor,
 suffixes: []TermExpr,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const first = try Factor.parse(parser) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const first = try Factor.parse(parser, allocator) orelse return null;
 
     var suffixes: ArrayList(TermExpr) = .empty;
-    errdefer suffixes.deinit(parser.allocator);
+    errdefer suffixes.deinit(allocator);
 
     while (parser.tokens.peek()) |token| switch (token.tag) {
-        .@"-", .@"+" => try suffixes.append(parser.allocator, try TermExpr.parse(parser) orelse return null),
+        .@"-", .@"+" => try suffixes.append(allocator, try TermExpr.parse(parser, allocator) orelse return null),
         else => break,
     };
 
     return .{
         .first = first,
-        .suffixes = try suffixes.toOwnedSlice(parser.allocator),
+        .suffixes = try suffixes.toOwnedSlice(allocator),
     };
 }
 
@@ -37,8 +37,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     allocator.free(this.suffixes);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_term)).@"fn".return_type.? {
-    return visitor.visit_term(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_term)).@"fn".return_type.? {
+    return visitor.visit_term(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

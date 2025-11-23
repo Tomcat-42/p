@@ -14,9 +14,9 @@ const Token = p.Tokenizer.Token;
 pub const ForInc = struct {
     expr: Expr,
 
-    pub fn parse(parser: *Parser) !?@This() {
+    pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
         const lookahead = try parser.match(
-            parser.allocator,
+            allocator,
             .peek,
             .{
                 .true,
@@ -45,7 +45,7 @@ pub const ForInc = struct {
             .proto,
             .@"!",
             .@"-",
-            => .{ .expr = try Expr.parse(parser) orelse return null },
+            => .{ .expr = try Expr.parse(parser, allocator) orelse return null },
             else => unreachable,
         };
     }
@@ -54,8 +54,8 @@ pub const ForInc = struct {
         this.expr.deinit(allocator);
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_for_inc)).@"fn".return_type.? {
-        return visitor.visit_for_inc(this);
+    pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_for_inc)).@"fn".return_type.? {
+        return visitor.visit_for_inc(allocator, this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

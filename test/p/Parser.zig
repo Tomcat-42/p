@@ -14,10 +14,10 @@ const Call = Parser.Call;
 fn assertCorrectParsing(T: type, src: []const u8, expected: ?T) !void {
     std.debug.print("[src]\n{s}\n", .{src});
 
-    var parser: Parser = .init(allocator, .init(src));
-    defer parser.deinit();
+    var parser: Parser = .init(.init(src));
+    defer parser.deinit(allocator);
 
-    var actual = try T.parse(&parser);
+    var actual = try T.parse(&parser, allocator);
     defer if (actual) |*a| a.deinit(allocator);
 
     std.debug.print("[parsed]\n", .{});

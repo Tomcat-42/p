@@ -13,9 +13,9 @@ const Token = p.Tokenizer.Token;
 @"and": Token,
 equality: Equality,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const @"and" = try parser.match(parser.allocator, .consume, .{.@"and"}) orelse return null;
-    const equality = try Equality.parse(parser) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const @"and" = try parser.match(allocator, .consume, .{.@"and"}) orelse return null;
+    const equality = try Equality.parse(parser, allocator) orelse return null;
 
     return .{ .@"and" = @"and", .equality = equality };
 }
@@ -24,8 +24,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.equality.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_logic_andExpr)).@"fn".return_type.? {
-    return visitor.visit_logic_andExpr(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_logic_andExpr)).@"fn".return_type.? {
+    return visitor.visit_logic_andExpr(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

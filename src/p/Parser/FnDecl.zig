@@ -19,30 +19,30 @@ params: []const FnParam,
 @")": Token,
 body: Block,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const @"fn" = try parser.match(parser.allocator, .consume, .{.@"fn"}) orelse return null;
-    const id = try parser.match(parser.allocator, .consume, .{.identifier}) orelse return null;
-    const @"(" = try parser.match(parser.allocator, .consume, .{.@"("}) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const @"fn" = try parser.match(allocator, .consume, .{.@"fn"}) orelse return null;
+    const id = try parser.match(allocator, .consume, .{.identifier}) orelse return null;
+    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
 
     var params: ArrayList(FnParam) = .empty;
-    errdefer params.deinit(parser.allocator);
+    errdefer params.deinit(allocator);
 
     while (parser.tokens.match(.peek, .{.identifier})) |lookahead| switch (lookahead.tag) {
         .identifier => try params.append(
-            parser.allocator,
-            try FnParam.parse(parser) orelse return null,
+            allocator,
+            try FnParam.parse(parser, allocator) orelse return null,
         ),
         else => break,
     };
 
-    const @")" = try parser.match(parser.allocator, .consume, .{.@")"}) orelse return null;
-    const body = try Block.parse(parser) orelse return null;
+    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
+    const body = try Block.parse(parser, allocator) orelse return null;
 
     return .{
         .@"fn" = @"fn",
         .id = id,
         .@"(" = @"(",
-        .params = try params.toOwnedSlice(parser.allocator),
+        .params = try params.toOwnedSlice(allocator),
         .@")" = @")",
         .body = body,
     };
@@ -53,8 +53,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.body.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_fn_decl)).@"fn".return_type.? {
-    return visitor.visit_fn_decl(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_fn_decl)).@"fn".return_type.? {
+    return visitor.visit_fn_decl(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

@@ -14,23 +14,23 @@ const TreeFormatter = p.common.TreeFormatter;
 primary: Primary,
 calls: []CallExpr,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const primary = try Primary.parse(parser) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const primary = try Primary.parse(parser, allocator) orelse return null;
 
     var calls: ArrayList(CallExpr) = .empty;
-    errdefer calls.deinit(parser.allocator);
+    errdefer calls.deinit(allocator);
 
     while (parser.tokens.peek()) |token| switch (token.tag) {
         .@"(", .@"." => try calls.append(
-            parser.allocator,
-            try CallExpr.parse(parser) orelse return null,
+            allocator,
+            try CallExpr.parse(parser, allocator) orelse return null,
         ),
         else => break,
     };
 
     return .{
         .primary = primary,
-        .calls = try calls.toOwnedSlice(parser.allocator),
+        .calls = try calls.toOwnedSlice(allocator),
     };
 }
 
@@ -40,8 +40,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     allocator.free(this.calls);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_call)).@"fn".return_type.? {
-    return visitor.visit_call(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_call)).@"fn".return_type.? {
+    return visitor.visit_call(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

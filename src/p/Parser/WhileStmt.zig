@@ -17,12 +17,12 @@ cond: Expr,
 @")": Token,
 body: Block,
 
-pub fn parse(parser: *Parser) anyerror!?@This() {
-    const @"while" = try parser.match(parser.allocator, .consume, .{.@"while"}) orelse return null;
-    const @"(" = try parser.match(parser.allocator, .consume, .{.@"("}) orelse return null;
-    const cond = try Expr.parse(parser) orelse return null;
-    const @")" = try parser.match(parser.allocator, .consume, .{.@")"}) orelse return null;
-    const body = try Block.parse(parser) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
+    const @"while" = try parser.match(allocator, .consume, .{.@"while"}) orelse return null;
+    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
+    const cond = try Expr.parse(parser, allocator) orelse return null;
+    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
+    const body = try Block.parse(parser, allocator) orelse return null;
 
     return .{
         .@"while" = @"while",
@@ -38,8 +38,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.body.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_while_stmt)).@"fn".return_type.? {
-    return visitor.visit_while_stmt(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_while_stmt)).@"fn".return_type.? {
+    return visitor.visit_while_stmt(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

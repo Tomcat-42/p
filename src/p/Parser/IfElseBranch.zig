@@ -13,9 +13,9 @@ const Token = p.Tokenizer.Token;
 @"else": Token,
 stmt: Stmt,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const @"else" = try parser.match(parser.allocator, .consume, .{.@"else"}) orelse return null;
-    const stmt = try Stmt.parse(parser) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const @"else" = try parser.match(allocator, .consume, .{.@"else"}) orelse return null;
+    const stmt = try Stmt.parse(parser, allocator) orelse return null;
 
     return .{ .@"else" = @"else", .stmt = stmt };
 }
@@ -24,8 +24,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.stmt.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_if_else_branch)).@"fn".return_type.? {
-    return visitor.visit_if_else_branch(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_if_else_branch)).@"fn".return_type.? {
+    return visitor.visit_if_else_branch(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

@@ -15,10 +15,10 @@ const Token = p.Tokenizer.Token;
 program: Program,
 @"}": Token,
 
-pub fn parse(parser: *Parser) anyerror!?@This() {
-    const @"{" = try parser.match(parser.allocator, .consume, .{.@"{"}) orelse return null;
-    const program = try Program.parse(parser) orelse return null;
-    const @"}" = try parser.match(parser.allocator, .consume, .{.@"}"}) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
+    const @"{" = try parser.match(allocator, .consume, .{.@"{"}) orelse return null;
+    const program = try Program.parse(parser, allocator) orelse return null;
+    const @"}" = try parser.match(allocator, .consume, .{.@"}"}) orelse return null;
 
     return .{
         .@"{" = @"{",
@@ -31,8 +31,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.program.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_block)).@"fn".return_type.? {
-    return visitor.visit_block(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_block)).@"fn".return_type.? {
+    return visitor.visit_block(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

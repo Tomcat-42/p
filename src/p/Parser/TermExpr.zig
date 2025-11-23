@@ -13,9 +13,9 @@ const Token = p.Tokenizer.Token;
 op: Token,
 factor: Factor,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const op = try parser.match(parser.allocator, .consume, .{ .@"+", .@"-" }) orelse return null;
-    const factor = try Factor.parse(parser) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const op = try parser.match(allocator, .consume, .{ .@"+", .@"-" }) orelse return null;
+    const factor = try Factor.parse(parser, allocator) orelse return null;
 
     return .{ .op = op, .factor = factor };
 }
@@ -24,8 +24,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.factor.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitExpr)).@"fn".return_type.? {
-    return visitor.visit_termExpr(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitExpr)).@"fn".return_type.? {
+    return visitor.visit_termExpr(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

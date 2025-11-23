@@ -14,10 +14,10 @@ const Token = p.Tokenizer.Token;
 expr: ?Expr,
 @";": Token,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const @"return" = try parser.match(parser.allocator, .consume, .{.@"return"}) orelse return null;
-    const expr = try Expr.parse(parser);
-    const @";" = try parser.match(parser.allocator, .consume, .{.@";"}) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const @"return" = try parser.match(allocator, .consume, .{.@"return"}) orelse return null;
+    const expr = try Expr.parse(parser, allocator);
+    const @";" = try parser.match(allocator, .consume, .{.@";"}) orelse return null;
 
     return .{
         .@"return" = @"return",
@@ -30,8 +30,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     if (this.expr) |*expr| expr.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_return_stmt)).@"fn".return_type.? {
-    return visitor.visit_return_stmt(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_return_stmt)).@"fn".return_type.? {
+    return visitor.visit_return_stmt(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

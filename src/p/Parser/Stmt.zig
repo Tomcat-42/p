@@ -25,9 +25,9 @@ pub const Stmt = union(enum) {
     while_stmt: WhileStmt,
     block: *Block,
 
-    pub fn parse(parser: *Parser) anyerror!?@This() {
+    pub fn parse(parser: *Parser, allocator: Allocator) anyerror!?@This() {
         const lookahead = try parser.match(
-            parser.allocator,
+            allocator,
             .peek,
             .{
                 .@"for",
@@ -51,12 +51,12 @@ pub const Stmt = union(enum) {
         ) orelse return null;
 
         return switch (lookahead.tag) {
-            .@"for" => .{ .for_stmt = try ForStmt.parse(parser) orelse return null },
-            .@"if" => .{ .if_stmt = try util.dupe(IfStmt, parser.allocator, try IfStmt.parse(parser) orelse return null) },
-            .print => .{ .print_stmt = try PrintStmt.parse(parser) orelse return null },
-            .@"return" => .{ .return_stmt = try ReturnStmt.parse(parser) orelse return null },
-            .@"while" => .{ .while_stmt = try WhileStmt.parse(parser) orelse return null },
-            .@"{" => .{ .block = try util.dupe(Block, parser.allocator, try Block.parse(parser) orelse return null) },
+            .@"for" => .{ .for_stmt = try ForStmt.parse(parser, allocator) orelse return null },
+            .@"if" => .{ .if_stmt = try util.dupe(IfStmt, allocator, try IfStmt.parse(parser, allocator) orelse return null) },
+            .print => .{ .print_stmt = try PrintStmt.parse(parser, allocator) orelse return null },
+            .@"return" => .{ .return_stmt = try ReturnStmt.parse(parser, allocator) orelse return null },
+            .@"while" => .{ .while_stmt = try WhileStmt.parse(parser, allocator) orelse return null },
+            .@"{" => .{ .block = try util.dupe(Block, allocator, try Block.parse(parser, allocator) orelse return null) },
             .true,
             .false,
             .nil,
@@ -68,7 +68,7 @@ pub const Stmt = union(enum) {
             .proto,
             .@"!",
             .@"-",
-            => .{ .expr_stmt = try ExprStmt.parse(parser) orelse return null },
+            => .{ .expr_stmt = try ExprStmt.parse(parser, allocator) orelse return null },
             else => unreachable,
         };
     }
@@ -87,8 +87,8 @@ pub const Stmt = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_stmt)).@"fn".return_type.? {
-        return visitor.visit_stmt(this);
+    pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_stmt)).@"fn".return_type.? {
+        return visitor.visit_stmt(allocator, this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

@@ -15,11 +15,11 @@ const Token = p.Tokenizer.Token;
 args: []FnArg,
 @")": Token,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const @"(" = try parser.match(parser.allocator, .consume, .{.@"("}) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const @"(" = try parser.match(allocator, .consume, .{.@"("}) orelse return null;
 
     var args: ArrayList(FnArg) = .empty;
-    errdefer args.deinit(parser.allocator);
+    errdefer args.deinit(allocator);
 
     while (parser.tokens.peek()) |lookahead| switch (lookahead.tag) {
         .true,
@@ -34,15 +34,15 @@ pub fn parse(parser: *Parser) !?@This() {
         .@"!",
         .@"-",
         => try args.append(
-            parser.allocator,
-            try FnArg.parse(parser) orelse return null,
+            allocator,
+            try FnArg.parse(parser, allocator) orelse return null,
         ),
         else => break,
     };
 
-    const @")" = try parser.match(parser.allocator, .consume, .{.@")"}) orelse return null;
+    const @")" = try parser.match(allocator, .consume, .{.@")"}) orelse return null;
 
-    return .{ .@"(" = @"(", .args = try args.toOwnedSlice(parser.allocator), .@")" = @")" };
+    return .{ .@"(" = @"(", .args = try args.toOwnedSlice(allocator), .@")" = @")" };
 }
 
 pub fn deinit(this: *@This(), allocator: Allocator) void {
@@ -50,8 +50,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     allocator.free(this.args);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_callFn)).@"fn".return_type.? {
-    return visitor.visit_callFn(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_callFn)).@"fn".return_type.? {
+    return visitor.visit_callFn(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

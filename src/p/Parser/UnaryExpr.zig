@@ -14,9 +14,9 @@ const Token = p.Tokenizer.Token;
 op: Token,
 call: Unary,
 
-pub fn parse(parser: *Parser) !?@This() {
-    const op = try parser.match(parser.allocator, .consume, .{ .@"-", .@"!" }) orelse return null;
-    const call = try Call.parse(parser) orelse return null;
+pub fn parse(parser: *Parser, allocator: Allocator) !?@This() {
+    const op = try parser.match(allocator, .consume, .{ .@"-", .@"!" }) orelse return null;
+    const call = try Call.parse(parser, allocator) orelse return null;
 
     return .{ .op = op, .call = .{ .call = call } };
 }
@@ -25,8 +25,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.call.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_unaryExpr)).@"fn".return_type.? {
-    return visitor.visit_unaryExpr(this);
+pub fn visit(this: *const @This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_unary_expr)).@"fn".return_type.? {
+    return visitor.visit_unary_expr(allocator, this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
