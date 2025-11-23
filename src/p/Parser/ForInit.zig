@@ -63,8 +63,8 @@ pub const ForInit = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitForInit)).@"fn".return_type.? {
-        return visitor.visitForInit(this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_for_init)).@"fn".return_type.? {
+        return visitor.visit_for_init(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

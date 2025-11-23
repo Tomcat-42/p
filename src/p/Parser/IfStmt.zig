@@ -46,8 +46,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     if (this.else_branch) |*branch| branch.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitIfStmt)).@"fn".return_type.? {
-    return visitor.visitIfStmt(this);
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_if_stmt)).@"fn".return_type.? {
+    return visitor.visit_if_stmt(this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

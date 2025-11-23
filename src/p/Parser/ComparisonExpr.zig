@@ -24,8 +24,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.term.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitComparisonSuffix)).@"fn".return_type.? {
-    return visitor.visitComparisonSuffix(this);
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_comparisonSuffix)).@"fn".return_type.? {
+    return visitor.visit_comparisonSuffix(this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

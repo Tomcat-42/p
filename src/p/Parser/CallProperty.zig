@@ -21,8 +21,8 @@ pub fn parse(parser: *Parser) !?@This() {
 
 pub fn deinit(_: *@This(), _: Allocator) void {}
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitCallProperty)).@"fn".return_type.? {
-    return visitor.visitCallProperty(this);
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_callProperty)).@"fn".return_type.? {
+    return visitor.visit_callProperty(this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

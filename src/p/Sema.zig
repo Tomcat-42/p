@@ -2,6 +2,8 @@ const std = @import("std");
 const fmt = std.fmt;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+const StringHashMapUnmanaged = std.StringArrayHashMapUnmanaged;
+const Io = std.Io;
 
 const move = @import("util").move;
 const p = @import("p");
@@ -21,14 +23,14 @@ pub fn init(allocator: Allocator) @This() {
 
 pub fn analyze(this: *@This(), cst: Parser.Program) !?Program {
     var ast_builder: AstBuilder = .init(this);
+    const ast: *Program = @ptrCast(@alignCast(try cst.visit(ast_builder.visitor())));
 
-    const ast = try move(
-        Program,
-        this.allocator,
-        @ptrCast(@alignCast(try cst.visit(ast_builder.visitor()))),
-    );
+    var ty: TypeChecker = .init(this);
+    defer ty.deinit(this.allocator);
 
-    return ast;
+    _ = try ast.visit(ty.visitor()) orelse return null;
+
+    return try move(Program, this.allocator, ast);
 }
 
 pub fn deinit(this: *@This()) void {
@@ -40,93 +42,41 @@ pub fn errs(this: *@This()) ?[]const Error {
     return this.errors.items;
 }
 
-pub const Visitor = struct {
-    ptr: *anyopaque,
-    vtable: *const VTable,
+pub const Value = union(enum) {
+    any,
+    nil,
+    bool: bool,
+    number: f64,
+    string: []const u8,
+    object: Object,
+    function: Function,
+};
 
-    pub const VTable = struct {
-        visit_program: *const fn (this: *anyopaque, node: *const Program) anyerror!*anyopaque,
+pub const Object = struct {};
 
-        visit_decl: *const fn (this: *anyopaque, node: *const Decl) anyerror!*anyopaque,
-        visit_obj_decl: *const fn (this: *anyopaque, node: *const *ObjDecl) anyerror!*anyopaque,
-        visit_fn_decl: *const fn (this: *anyopaque, node: *const *FnDecl) anyerror!*anyopaque,
-        visit_var_decl: *const fn (this: *anyopaque, node: *const *VarDecl) anyerror!*anyopaque,
+pub const Function = struct {};
 
-        visit_stmt: *const fn (this: *anyopaque, node: *const *Stmt) anyerror!*anyopaque,
-        visit_if_stmt: *const fn (this: *anyopaque, node: *const *IfStmt) anyerror!*anyopaque,
-        visit_while_stmt: *const fn (this: *anyopaque, node: *const *WhileStmt) anyerror!*anyopaque,
-        visit_for_stmt: *const fn (this: *anyopaque, node: *const *ForStmt) anyerror!*anyopaque,
+pub const Scope = struct {
+    parent: ?*@This() = null,
+    bindings: StringHashMapUnmanaged(Value) = .empty,
 
-        visit_expr: *const fn (this: *anyopaque, node: *const *Expr) anyerror!*anyopaque,
-        visit_unary_expr: *const fn (this: *anyopaque, node: *const *UnaryExpr) anyerror!*anyopaque,
-        visit_binary_expr: *const fn (this: *anyopaque, node: *const *BinaryExpr) anyerror!*anyopaque,
-        visit_assign_expr: *const fn (this: *anyopaque, node: *const *AssignExpr) anyerror!*anyopaque,
-        visit_property_expr: *const fn (this: *anyopaque, node: *const *PropertyExpr) anyerror!*anyopaque,
-        visit_call_expr: *const fn (this: *anyopaque, node: *const *CallExpr) anyerror!*anyopaque,
-    };
-
-    pub fn visitProgram(this: *@This(), node: *const Program) anyerror!*anyopaque {
-        return this.vtable.visit_program(this.ptr, node);
+    pub fn lookup(this: *@This(), name: []const u8) ?Value {
+        var current: ?*@This() = this;
+        return while (current) |scope| : (current = scope.parent) {
+            if (scope.bindings.get(name)) |value|
+                return value;
+        } else null;
     }
 
-    pub fn visitDecl(this: *@This(), node: *const Decl) anyerror!*anyopaque {
-        return this.vtable.visit_decl(this.ptr, node);
-    }
-
-    pub fn visitStmt(this: *@This(), node: *const *Stmt) anyerror!*anyopaque {
-        return this.vtable.visit_stmt(this.ptr, node);
-    }
-
-    pub fn visitExpr(this: *@This(), node: *const *Expr) anyerror!*anyopaque {
-        return this.vtable.visit_expr(this.ptr, node);
-    }
-
-    pub fn visitObjDecl(this: *@This(), node: *const *ObjDecl) anyerror!*anyopaque {
-        return this.vtable.visit_obj_decl(this.ptr, node);
-    }
-
-    pub fn visitFnDecl(this: *@This(), node: *const *FnDecl) anyerror!*anyopaque {
-        return this.vtable.visit_fn_decl(this.ptr, node);
-    }
-
-    pub fn visitVarDecl(this: *@This(), node: *const *VarDecl) anyerror!*anyopaque {
-        return this.vtable.visit_var_decl(this.ptr, node);
-    }
-
-    pub fn visitIfStmt(this: *@This(), node: *const *IfStmt) anyerror!*anyopaque {
-        return this.vtable.visit_if_stmt(this.ptr, node);
-    }
-
-    pub fn visitWhileStmt(this: *@This(), node: *const *WhileStmt) anyerror!*anyopaque {
-        return this.vtable.visit_while_stmt(this.ptr, node);
-    }
-
-    pub fn visitForStmt(this: *@This(), node: *const *ForStmt) anyerror!*anyopaque {
-        return this.vtable.visit_for_stmt(this.ptr, node);
-    }
-
-    pub fn visitUnaryExpr(this: *@This(), node: *const *UnaryExpr) anyerror!*anyopaque {
-        return this.vtable.visit_unary_expr(this.ptr, node);
-    }
-
-    pub fn visitBinaryExpr(this: *@This(), node: *const *BinaryExpr) anyerror!*anyopaque {
-        return this.vtable.visit_binary_expr(this.ptr, node);
-    }
-
-    pub fn visitAssignExpr(this: *@This(), node: *const *AssignExpr) anyerror!*anyopaque {
-        return this.vtable.visit_assign_expr(this.ptr, node);
-    }
-
-    pub fn visitPropertyExpr(this: *@This(), node: *const *PropertyExpr) anyerror!*anyopaque {
-        return this.vtable.visit_property_expr(this.ptr, node);
-    }
-
-    pub fn visitCallExpr(this: *@This(), node: *const *CallExpr) anyerror!*anyopaque {
-        return this.vtable.visit_call_expr(this.ptr, node);
+    pub fn bind(this: *@This(), name: []const u8, value: Value) !?void {
+        const result = try this.bindings.getOrPut(name);
+        if (result.found_existing) return null;
+        result.value_ptr.* = value;
     }
 };
 
 pub const Program = struct {
+    scope: Scope = .{},
     decls: []Decl,
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
@@ -134,8 +84,8 @@ pub const Program = struct {
         allocator.free(this.decls);
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitProgram(this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_program)).@"fn".return_type.? {
+        return visitor.visit_program(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -157,8 +107,8 @@ pub const Decl = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitDecl(this.*);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_decl)).@"fn".return_type.? {
+        return visitor.visit_decl(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -178,8 +128,8 @@ pub const ObjDecl = struct {
         allocator.free(this.body.decls);
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitObjDecl(&this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_obj_decl)).@"fn".return_type.? {
+        return visitor.visit_obj_decl(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -200,8 +150,8 @@ pub const FnDecl = struct {
         this.body.deinit(allocator);
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitFnDecl(&this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_fn_decl)).@"fn".return_type.? {
+        return visitor.visit_fn_decl(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -219,8 +169,8 @@ pub const VarDecl = struct {
         if (this.init) |*init_expr| init_expr.deinit(allocator);
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitVarDecl(&this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_var_decl)).@"fn".return_type.? {
+        return visitor.visit_var_decl(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -246,8 +196,8 @@ pub const Stmt = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitStmt(&this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_stmt)).@"fn".return_type.? {
+        return visitor.visit_stmt(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -275,8 +225,8 @@ pub const IfStmt = struct {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitIfStmt(&this);
+    pub fn visit(this: *const @This(), visitor: *Visitor) @typeInfo(@TypeOf(Visitor.visit_if_stmt)).@"fn".return_type.? {
+        return visitor.visit_if_stmt(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -298,8 +248,8 @@ pub const WhileStmt = struct {
         allocator.destroy(this.body);
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitWhileStmt(&this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_while_stmt)).@"fn".return_type.? {
+        return visitor.visit_while_stmt(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -336,8 +286,8 @@ pub const ForStmt = struct {
         allocator.destroy(this.body);
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitForStmt(&this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_for_stmt)).@"fn".return_type.? {
+        return visitor.visit_for_stmt(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -372,8 +322,8 @@ pub const Expr = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitExpr(&this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_expr)).@"fn".return_type.? {
+        return visitor.visit_expr(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -394,8 +344,8 @@ pub const UnaryExpr = struct {
         allocator.destroy(this.operand);
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitUnaryExpr(&this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_unary_expr)).@"fn".return_type.? {
+        return visitor.visit_unary_expr(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -420,8 +370,8 @@ pub const BinaryExpr = struct {
         allocator.destroy(this.right);
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitBinaryExpr(&this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_binary_expr)).@"fn".return_type.? {
+        return visitor.visit_binary_expr(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -443,8 +393,8 @@ pub const AssignExpr = struct {
         allocator.destroy(this.value);
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitAssignExpr(&this);
+    pub fn visit(this: *@This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_assign_expr)).@"fn".return_type.? {
+        return visitor.visit_assign_expr(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -463,8 +413,8 @@ pub const PropertyExpr = struct {
         allocator.destroy(this.object);
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitPropertyExpr(&this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_property_expr)).@"fn".return_type.? {
+        return visitor.visit_property_expr(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -489,8 +439,8 @@ pub const CallExpr = struct {
         allocator.free(this.args);
     }
 
-    pub fn visit(this: *const @This(), visitor: *Visitor) void {
-        visitor.visitCallExpr(&this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_call_expr)).@"fn".return_type.? {
+        return visitor.visit_call_expr(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
@@ -498,4 +448,90 @@ pub const CallExpr = struct {
     }
 
     const Format = TreeFormatter(@This());
+};
+
+pub const Visitor = struct {
+    ptr: *anyopaque,
+    vtable: *const VTable,
+
+    pub const VTable = struct {
+        visit_program: *const fn (this: *anyopaque, node: *const Program) anyerror!?*anyopaque,
+
+        visit_decl: *const fn (this: *anyopaque, node: *const Decl) anyerror!?*anyopaque,
+        visit_obj_decl: *const fn (this: *anyopaque, node: *const ObjDecl) anyerror!?*anyopaque,
+        visit_fn_decl: *const fn (this: *anyopaque, node: *const FnDecl) anyerror!?*anyopaque,
+        visit_var_decl: *const fn (this: *anyopaque, node: *const VarDecl) anyerror!?*anyopaque,
+
+        visit_stmt: *const fn (this: *anyopaque, node: *const Stmt) anyerror!?*anyopaque,
+        visit_if_stmt: *const fn (this: *anyopaque, node: *const IfStmt) anyerror!?*anyopaque,
+        visit_while_stmt: *const fn (this: *anyopaque, node: *const WhileStmt) anyerror!?*anyopaque,
+        visit_for_stmt: *const fn (this: *anyopaque, node: *const ForStmt) anyerror!?*anyopaque,
+
+        visit_expr: *const fn (this: *anyopaque, node: *const Expr) anyerror!?*anyopaque,
+        visit_unary_expr: *const fn (this: *anyopaque, node: *const UnaryExpr) anyerror!?*anyopaque,
+        visit_binary_expr: *const fn (this: *anyopaque, node: *const BinaryExpr) anyerror!?*anyopaque,
+        visit_assign_expr: *const fn (this: *anyopaque, node: *const AssignExpr) anyerror!?*anyopaque,
+        visit_property_expr: *const fn (this: *anyopaque, node: *const PropertyExpr) anyerror!?*anyopaque,
+        visit_call_expr: *const fn (this: *anyopaque, node: *const CallExpr) anyerror!?*anyopaque,
+    };
+
+    pub inline fn visit_program(this: *const @This(), node: *const Program) anyerror!?*anyopaque {
+        return this.vtable.visit_program(this.ptr, node);
+    }
+
+    pub inline fn visit_decl(this: *const @This(), node: *const Decl) anyerror!?*anyopaque {
+        return this.vtable.visit_decl(this.ptr, node);
+    }
+
+    pub inline fn visit_stmt(this: *const @This(), node: *const Stmt) anyerror!?*anyopaque {
+        return this.vtable.visit_stmt(this.ptr, node);
+    }
+
+    pub inline fn visit_expr(this: *const @This(), node: *const Expr) anyerror!?*anyopaque {
+        return this.vtable.visit_expr(this.ptr, node);
+    }
+
+    pub inline fn visit_obj_decl(this: *const @This(), node: *const ObjDecl) anyerror!?*anyopaque {
+        return this.vtable.visit_obj_decl(this.ptr, node);
+    }
+
+    pub inline fn visit_fn_decl(this: *const @This(), node: *const FnDecl) anyerror!?*anyopaque {
+        return this.vtable.visit_fn_decl(this.ptr, node);
+    }
+
+    pub inline fn visit_var_decl(this: *const @This(), node: *const VarDecl) anyerror!?*anyopaque {
+        return this.vtable.visit_var_decl(this.ptr, node);
+    }
+
+    pub inline fn visit_if_stmt(this: *const @This(), node: *const IfStmt) anyerror!?*anyopaque {
+        return this.vtable.visit_if_stmt(this.ptr, node);
+    }
+
+    pub inline fn visit_while_stmt(this: *const @This(), node: *const WhileStmt) anyerror!?*anyopaque {
+        return this.vtable.visit_while_stmt(this.ptr, node);
+    }
+
+    pub inline fn visit_for_stmt(this: *const @This(), node: *const ForStmt) anyerror!?*anyopaque {
+        return this.vtable.visit_for_stmt(this.ptr, node);
+    }
+
+    pub inline fn visit_unary_expr(this: *const @This(), node: *const UnaryExpr) anyerror!?*anyopaque {
+        return this.vtable.visit_unary_expr(this.ptr, node);
+    }
+
+    pub inline fn visit_binary_expr(this: *const @This(), node: *const BinaryExpr) anyerror!?*anyopaque {
+        return this.vtable.visit_binary_expr(this.ptr, node);
+    }
+
+    pub inline fn visit_assign_expr(this: *const @This(), node: *const AssignExpr) anyerror!?*anyopaque {
+        return this.vtable.visit_assign_expr(this.ptr, node);
+    }
+
+    pub inline fn visit_property_expr(this: *const @This(), node: *const PropertyExpr) anyerror!?*anyopaque {
+        return this.vtable.visit_property_expr(this.ptr, node);
+    }
+
+    pub inline fn visit_call_expr(this: *const @This(), node: *const CallExpr) anyerror!?*anyopaque {
+        return this.vtable.visit_call_expr(this.ptr, node);
+    }
 };

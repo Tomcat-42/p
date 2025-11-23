@@ -54,8 +54,8 @@ pub const ForInc = struct {
         this.expr.deinit(allocator);
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitForInc)).@"fn".return_type.? {
-        return visitor.visitForInc(this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_for_inc)).@"fn".return_type.? {
+        return visitor.visit_for_inc(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

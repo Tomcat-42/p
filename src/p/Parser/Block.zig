@@ -31,8 +31,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.program.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitBlock)).@"fn".return_type.? {
-    return visitor.visitBlock(this);
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_block)).@"fn".return_type.? {
+    return visitor.visit_block(this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

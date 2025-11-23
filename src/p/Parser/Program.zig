@@ -49,8 +49,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     allocator.free(this.decls);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitProgram)).@"fn".return_type.? {
-    return visitor.visitProgram(this);
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_program)).@"fn".return_type.? {
+    return visitor.visit_program(this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

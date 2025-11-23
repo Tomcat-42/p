@@ -61,8 +61,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.body.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitForStmt)).@"fn".return_type.? {
-    return visitor.visitForStmt(this);
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_for_stmt)).@"fn".return_type.? {
+    return visitor.visit_for_stmt(this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

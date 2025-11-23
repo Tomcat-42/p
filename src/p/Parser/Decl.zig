@@ -74,8 +74,8 @@ pub const Decl = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitDecl)).@"fn".return_type.? {
-        return visitor.visitDecl(this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_decl)).@"fn".return_type.? {
+        return visitor.visit_decl(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

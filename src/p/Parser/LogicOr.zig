@@ -37,8 +37,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     allocator.free(this.suffixes);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitLogicOr)).@"fn".return_type.? {
-    return visitor.visitLogicOr(this);
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_logic_or)).@"fn".return_type.? {
+    return visitor.visit_logic_or(this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

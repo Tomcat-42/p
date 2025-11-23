@@ -60,8 +60,8 @@ pub const ForCond = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitForCond)).@"fn".return_type.? {
-        return visitor.visitForCond(this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_for_cond)).@"fn".return_type.? {
+        return visitor.visit_for_cond(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

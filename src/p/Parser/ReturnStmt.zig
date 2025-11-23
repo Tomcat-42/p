@@ -30,8 +30,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     if (this.expr) |*expr| expr.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitReturnStmt)).@"fn".return_type.? {
-    return visitor.visitReturnStmt(this);
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_return_stmt)).@"fn".return_type.? {
+    return visitor.visit_return_stmt(this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

@@ -26,8 +26,8 @@ pub fn deinit(this: *@This(), allocator: Allocator) void {
     this.expr.deinit(allocator);
 }
 
-pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitGroupExpr)).@"fn".return_type.? {
-    return visitor.visitGroupExpr(this);
+pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_group_expr)).@"fn".return_type.? {
+    return visitor.visit_group_expr(this);
 }
 
 pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {

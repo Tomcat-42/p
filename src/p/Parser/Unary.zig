@@ -47,8 +47,8 @@ pub const Unary = union(enum) {
         }
     }
 
-    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visitUnary)).@"fn".return_type.? {
-        return visitor.visitUnary(this);
+    pub fn visit(this: *const @This(), visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_unary)).@"fn".return_type.? {
+        return visitor.visit_unary(this);
     }
 
     pub fn format(this: *const @This(), depth: usize) fmt.Alt(Format, Format.format) {
