@@ -103,21 +103,18 @@ pub fn main() !void {
         'h' => return opts.usage(),
         'V' => return version(),
         'v' => LOG_LEVEL = .debug,
-        else => unreachable,
+        else => {},
     };
 
     if (opts.positionals()) |filenames| for (filenames) |filename| {
-        const file = try fs.cwd().openFile(mem.span(filename), .{});
-        defer file.close();
+        const content = try fs.cwd().readFileAlloc(
+            mem.span(filename),
+            allocator,
+            .unlimited,
+        );
+        defer allocator.free(content);
 
-        var buffer: [BUFFER_SIZE]u8 = undefined;
-        var fileReader = file.reader(io, &buffer);
-        const reader = &fileReader.interface;
-
-        while (try reader.takeDelimiter('\n')) |line| {
-            const value = try interpreter.eval(allocator, line);
-            try stdout.print("⇒ {?s}\n", .{value});
-        }
+        _ = try interpreter.eval(allocator, content);
         try stdout.flush();
     };
 

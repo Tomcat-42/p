@@ -1,5 +1,3 @@
-// Basic function examples
-
 fn greet() {
     print("Hello!");
 }

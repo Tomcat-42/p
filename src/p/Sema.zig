@@ -49,7 +49,7 @@ pub fn errs(this: *const @This()) ?[]const Error {
     return this.errors.items;
 }
 
-pub const Type = union(enum) { any, nil, bool, number, string, object, function };
+pub const Type = enum { any, nil, bool, number, string, object, function };
 
 pub const Scope = struct {
     parent: ?*@This() = null,
@@ -79,6 +79,7 @@ pub const Program = struct {
     decls: []Decl,
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
+        this.scope.deinit(allocator);
         for (this.decls) |*decl| decl.deinit(allocator);
         allocator.free(this.decls);
     }
@@ -123,8 +124,7 @@ pub const ObjDecl = struct {
     body: Program,
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
-        for (this.body.decls) |*decl| decl.deinit(allocator);
-        allocator.free(this.body.decls);
+        this.body.deinit(allocator);
     }
 
     pub fn visit(this: *@This(), allocator: Allocator, visitor: Visitor) @typeInfo(@TypeOf(Visitor.visit_obj_decl)).@"fn".return_type.? {
@@ -145,7 +145,6 @@ pub const FnDecl = struct {
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
         allocator.free(this.params);
-        for (this.body.decls) |*decl| decl.deinit(allocator);
         this.body.deinit(allocator);
     }
 
@@ -207,13 +206,12 @@ pub const Stmt = union(enum) {
 };
 
 pub const IfStmt = struct {
-    condition: *Expr,
+    condition: Expr,
     then_branch: *Stmt,
     else_branch: ?*Stmt,
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
         this.condition.deinit(allocator);
-        allocator.destroy(this.condition);
 
         this.then_branch.deinit(allocator);
         allocator.destroy(this.then_branch);
@@ -236,12 +234,11 @@ pub const IfStmt = struct {
 };
 
 pub const WhileStmt = struct {
-    condition: *Expr,
+    condition: Expr,
     body: *Stmt,
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
         this.condition.deinit(allocator);
-        allocator.destroy(this.condition);
 
         this.body.deinit(allocator);
         allocator.destroy(this.body);
@@ -261,25 +258,20 @@ pub const WhileStmt = struct {
 pub const ForStmt = struct {
     pub const Init = union(enum) { variable: VarDecl, expr: Expr };
 
+    scope: Scope = .{},
     init: ?Init,
-    condition: ?*Expr,
-    increment: ?*Expr,
+    condition: ?Expr,
+    increment: ?Expr,
     body: *Stmt,
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
+        this.scope.deinit(allocator);
         if (this.init) |*init_value| switch (init_value.*) {
             inline else => |*i| i.deinit(allocator),
         };
 
-        if (this.condition) |condition| {
-            condition.deinit(allocator);
-            allocator.destroy(condition);
-        }
-
-        if (this.increment) |increment| {
-            increment.deinit(allocator);
-            allocator.destroy(increment);
-        }
+        if (this.condition) |*condition| condition.deinit(allocator);
+        if (this.increment) |*increment| increment.deinit(allocator);
 
         this.body.deinit(allocator);
         allocator.destroy(this.body);
@@ -425,14 +417,13 @@ pub const PropertyExpr = struct {
 
 pub const CallExpr = struct {
     callee: *Expr,
-    args: []*Expr,
+    args: []Expr,
 
     pub fn deinit(this: *@This(), allocator: Allocator) void {
         this.callee.deinit(allocator);
         allocator.destroy(this.callee);
-        for (this.args) |arg| {
+        for (this.args) |*arg| {
             arg.deinit(allocator);
-            allocator.destroy(arg);
         }
 
         allocator.free(this.args);
@@ -454,83 +445,83 @@ pub const Visitor = struct {
     vtable: *const VTable,
 
     pub const VTable = struct {
-        visit_program: *const fn (this: *anyopaque, allocator: Allocator, node: *Program) anyerror!?*anyopaque,
+        visit_program: *const fn (_: *anyopaque, _: Allocator, _: *Program) anyerror!?*anyopaque,
 
-        visit_decl: *const fn (this: *anyopaque, allocator: Allocator, node: *Decl) anyerror!?*anyopaque,
-        visit_obj_decl: *const fn (this: *anyopaque, allocator: Allocator, node: *ObjDecl) anyerror!?*anyopaque,
-        visit_fn_decl: *const fn (this: *anyopaque, allocator: Allocator, node: *FnDecl) anyerror!?*anyopaque,
-        visit_var_decl: *const fn (this: *anyopaque, allocator: Allocator, node: *VarDecl) anyerror!?*anyopaque,
+        visit_decl: *const fn (_: *anyopaque, _: Allocator, _: *Decl) anyerror!?*anyopaque,
+        visit_obj_decl: *const fn (_: *anyopaque, _: Allocator, _: *ObjDecl) anyerror!?*anyopaque,
+        visit_fn_decl: *const fn (_: *anyopaque, _: Allocator, _: *FnDecl) anyerror!?*anyopaque,
+        visit_var_decl: *const fn (_: *anyopaque, _: Allocator, _: *VarDecl) anyerror!?*anyopaque,
 
-        visit_stmt: *const fn (this: *anyopaque, allocator: Allocator, node: *Stmt) anyerror!?*anyopaque,
-        visit_if_stmt: *const fn (this: *anyopaque, allocator: Allocator, node: *IfStmt) anyerror!?*anyopaque,
-        visit_while_stmt: *const fn (this: *anyopaque, allocator: Allocator, node: *WhileStmt) anyerror!?*anyopaque,
-        visit_for_stmt: *const fn (this: *anyopaque, allocator: Allocator, node: *ForStmt) anyerror!?*anyopaque,
+        visit_stmt: *const fn (_: *anyopaque, _: Allocator, _: *Stmt) anyerror!?*anyopaque,
+        visit_if_stmt: *const fn (_: *anyopaque, _: Allocator, _: *IfStmt) anyerror!?*anyopaque,
+        visit_while_stmt: *const fn (_: *anyopaque, _: Allocator, _: *WhileStmt) anyerror!?*anyopaque,
+        visit_for_stmt: *const fn (_: *anyopaque, _: Allocator, _: *ForStmt) anyerror!?*anyopaque,
 
-        visit_expr: *const fn (this: *anyopaque, allocator: Allocator, node: *Expr) anyerror!?*anyopaque,
-        visit_unary_expr: *const fn (this: *anyopaque, allocator: Allocator, node: *UnaryExpr) anyerror!?*anyopaque,
-        visit_binary_expr: *const fn (this: *anyopaque, allocator: Allocator, node: *BinaryExpr) anyerror!?*anyopaque,
-        visit_assign_expr: *const fn (this: *anyopaque, allocator: Allocator, node: *AssignExpr) anyerror!?*anyopaque,
-        visit_property_expr: *const fn (this: *anyopaque, allocator: Allocator, node: *PropertyExpr) anyerror!?*anyopaque,
-        visit_call_expr: *const fn (this: *anyopaque, allocator: Allocator, node: *CallExpr) anyerror!?*anyopaque,
+        visit_expr: *const fn (_: *anyopaque, _: Allocator, _: *Expr) anyerror!?*anyopaque,
+        visit_unary_expr: *const fn (_: *anyopaque, _: Allocator, _: *UnaryExpr) anyerror!?*anyopaque,
+        visit_binary_expr: *const fn (_: *anyopaque, _: Allocator, _: *BinaryExpr) anyerror!?*anyopaque,
+        visit_assign_expr: *const fn (_: *anyopaque, _: Allocator, _: *AssignExpr) anyerror!?*anyopaque,
+        visit_property_expr: *const fn (_: *anyopaque, _: Allocator, _: *PropertyExpr) anyerror!?*anyopaque,
+        visit_call_expr: *const fn (_: *anyopaque, _: Allocator, _: *CallExpr) anyerror!?*anyopaque,
     };
 
-    pub inline fn visit_program(this: *const @This(), allocator: Allocator, node: *const Program) anyerror!?*anyopaque {
-        return this.vtable.visit_program(this.ptr, allocator, @constCast(node));
+    pub inline fn visit_program(ctx: *const @This(), allocator: Allocator, node: *const Program) anyerror!?*anyopaque {
+        return ctx.vtable.visit_program(ctx.ptr, allocator, @constCast(node));
     }
 
-    pub inline fn visit_decl(this: *const @This(), allocator: Allocator, node: *Decl) anyerror!?*anyopaque {
-        return this.vtable.visit_decl(this.ptr, allocator, node);
+    pub inline fn visit_decl(ctx: *const @This(), allocator: Allocator, node: *Decl) anyerror!?*anyopaque {
+        return ctx.vtable.visit_decl(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_stmt(this: *const @This(), allocator: Allocator, node: *Stmt) anyerror!?*anyopaque {
-        return this.vtable.visit_stmt(this.ptr, allocator, node);
+    pub inline fn visit_stmt(ctx: *const @This(), allocator: Allocator, node: *Stmt) anyerror!?*anyopaque {
+        return ctx.vtable.visit_stmt(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_expr(this: *const @This(), allocator: Allocator, node: *Expr) anyerror!?*anyopaque {
-        return this.vtable.visit_expr(this.ptr, allocator, node);
+    pub inline fn visit_expr(ctx: *const @This(), allocator: Allocator, node: *Expr) anyerror!?*anyopaque {
+        return ctx.vtable.visit_expr(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_obj_decl(this: *const @This(), allocator: Allocator, node: *ObjDecl) anyerror!?*anyopaque {
-        return this.vtable.visit_obj_decl(this.ptr, allocator, node);
+    pub inline fn visit_obj_decl(ctx: *const @This(), allocator: Allocator, node: *ObjDecl) anyerror!?*anyopaque {
+        return ctx.vtable.visit_obj_decl(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_fn_decl(this: *const @This(), allocator: Allocator, node: *FnDecl) anyerror!?*anyopaque {
-        return this.vtable.visit_fn_decl(this.ptr, allocator, node);
+    pub inline fn visit_fn_decl(ctx: *const @This(), allocator: Allocator, node: *FnDecl) anyerror!?*anyopaque {
+        return ctx.vtable.visit_fn_decl(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_var_decl(this: *const @This(), allocator: Allocator, node: *VarDecl) anyerror!?*anyopaque {
-        return this.vtable.visit_var_decl(this.ptr, allocator, node);
+    pub inline fn visit_var_decl(ctx: *const @This(), allocator: Allocator, node: *VarDecl) anyerror!?*anyopaque {
+        return ctx.vtable.visit_var_decl(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_if_stmt(this: *const @This(), allocator: Allocator, node: *IfStmt) anyerror!?*anyopaque {
-        return this.vtable.visit_if_stmt(this.ptr, allocator, node);
+    pub inline fn visit_if_stmt(ctx: *const @This(), allocator: Allocator, node: *IfStmt) anyerror!?*anyopaque {
+        return ctx.vtable.visit_if_stmt(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_while_stmt(this: *const @This(), allocator: Allocator, node: *WhileStmt) anyerror!?*anyopaque {
-        return this.vtable.visit_while_stmt(this.ptr, allocator, node);
+    pub inline fn visit_while_stmt(ctx: *const @This(), allocator: Allocator, node: *WhileStmt) anyerror!?*anyopaque {
+        return ctx.vtable.visit_while_stmt(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_for_stmt(this: *const @This(), allocator: Allocator, node: *ForStmt) anyerror!?*anyopaque {
-        return this.vtable.visit_for_stmt(this.ptr, allocator, node);
+    pub inline fn visit_for_stmt(ctx: *const @This(), allocator: Allocator, node: *ForStmt) anyerror!?*anyopaque {
+        return ctx.vtable.visit_for_stmt(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_unary_expr(this: *const @This(), allocator: Allocator, node: *UnaryExpr) anyerror!?*anyopaque {
-        return this.vtable.visit_unary_expr(this.ptr, allocator, node);
+    pub inline fn visit_unary_expr(ctx: *const @This(), allocator: Allocator, node: *UnaryExpr) anyerror!?*anyopaque {
+        return ctx.vtable.visit_unary_expr(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_binary_expr(this: *const @This(), allocator: Allocator, node: *BinaryExpr) anyerror!?*anyopaque {
-        return this.vtable.visit_binary_expr(this.ptr, allocator, node);
+    pub inline fn visit_binary_expr(ctx: *const @This(), allocator: Allocator, node: *BinaryExpr) anyerror!?*anyopaque {
+        return ctx.vtable.visit_binary_expr(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_assign_expr(this: *const @This(), allocator: Allocator, node: *AssignExpr) anyerror!?*anyopaque {
-        return this.vtable.visit_assign_expr(this.ptr, allocator, node);
+    pub inline fn visit_assign_expr(ctx: *const @This(), allocator: Allocator, node: *AssignExpr) anyerror!?*anyopaque {
+        return ctx.vtable.visit_assign_expr(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_property_expr(this: *const @This(), allocator: Allocator, node: *PropertyExpr) anyerror!?*anyopaque {
-        return this.vtable.visit_property_expr(this.ptr, allocator, node);
+    pub inline fn visit_property_expr(ctx: *const @This(), allocator: Allocator, node: *PropertyExpr) anyerror!?*anyopaque {
+        return ctx.vtable.visit_property_expr(ctx.ptr, allocator, node);
     }
 
-    pub inline fn visit_call_expr(this: *const @This(), allocator: Allocator, node: *CallExpr) anyerror!?*anyopaque {
-        return this.vtable.visit_call_expr(this.ptr, allocator, node);
+    pub inline fn visit_call_expr(ctx: *const @This(), allocator: Allocator, node: *CallExpr) anyerror!?*anyopaque {
+        return ctx.vtable.visit_call_expr(ctx.ptr, allocator, node);
     }
 };

@@ -217,7 +217,7 @@ fn visit_for_stmt(ctx: *anyopaque, allocator: Allocator, node: *const Parser.For
             .condition = cond: {
                 if (node.cond) |*cond| {
                     if (try cond.visit(allocator, this.visitor())) |res| {
-                        break :cond @ptrCast(@alignCast(res));
+                        break :cond try move(Sema.Expr, allocator, @ptrCast(@alignCast(res)));
                     }
                 }
                 break :cond null;
@@ -225,7 +225,7 @@ fn visit_for_stmt(ctx: *anyopaque, allocator: Allocator, node: *const Parser.For
             .increment = inc: {
                 if (node.inc) |*inc| {
                     if (try inc.visit(allocator, this.visitor())) |res| {
-                        break :inc @ptrCast(@alignCast(res));
+                        break :inc try move(Sema.Expr, allocator, @ptrCast(@alignCast(res)));
                     }
                 }
                 break :inc null;
@@ -260,7 +260,7 @@ fn visit_for_init(ctx: *anyopaque, allocator: Allocator, node: *const Parser.For
 fn visit_for_cond(ctx: *anyopaque, allocator: Allocator, node: *const Parser.ForCond) anyerror!?*anyopaque {
     const this: *@This() = @ptrCast(@alignCast(ctx));
     return switch (node.*) {
-        .expr => |*expr_stmt| try expr_stmt.visit(allocator, this.visitor()),
+        .expr => |*expr_stmt| try expr_stmt.expr.visit(allocator, this.visitor()),
         .@";" => null,
     };
 }
@@ -275,7 +275,7 @@ fn visit_if_stmt(ctx: *anyopaque, allocator: Allocator, node: *const Parser.IfSt
 
     return try dupe(Sema.Stmt, allocator, .{
         .@"if" = .{
-            .condition = @ptrCast(@alignCast(try node.cond.visit(allocator, this.visitor()) orelse return null)),
+            .condition = try move(Sema.Expr, allocator, @ptrCast(@alignCast(try node.cond.visit(allocator, this.visitor()) orelse return null))),
             .then_branch = @ptrCast(@alignCast(try node.main_branch.visit(allocator, this.visitor()) orelse return null)),
             .else_branch = if (node.else_branch) |*else_br|
                 @ptrCast(@alignCast(try else_br.stmt.visit(allocator, this.visitor()) orelse return null))
@@ -316,7 +316,7 @@ fn visit_while_stmt(ctx: *anyopaque, allocator: Allocator, node: *const Parser.W
 
     return try dupe(Sema.Stmt, allocator, .{
         .@"while" = .{
-            .condition = @ptrCast(@alignCast(try node.cond.visit(allocator, this.visitor()) orelse return null)),
+            .condition = try move(Sema.Expr, allocator, @ptrCast(@alignCast(try node.cond.visit(allocator, this.visitor()) orelse return null))),
             .body = @ptrCast(@alignCast(try node.body.visit(allocator, this.visitor()) orelse return null)),
         },
     });
@@ -558,13 +558,17 @@ fn visit_call(ctx: *anyopaque, allocator: Allocator, node: *const Parser.Call) a
     for (node.calls) |*call_expr| {
         current_expr = switch (call_expr.*) {
             .call_fn => |*call_fn| blk: {
-                const args = try allocator.alloc(*Sema.Expr, call_fn.args.len);
-                for (call_fn.args, 0..) |*arg, i| args[i] = @ptrCast(@alignCast(
-                    try arg.visit(
-                        allocator,
-                        this.visitor(),
-                    ) orelse return null,
-                ));
+                const args = try allocator.alloc(Sema.Expr, call_fn.args.len);
+                for (call_fn.args, 0..) |*arg, i| args[i] = try move(
+                    Sema.Expr,
+                    allocator,
+                    @ptrCast(@alignCast(
+                        try arg.visit(
+                            allocator,
+                            this.visitor(),
+                        ) orelse return null,
+                    )),
+                );
 
                 break :blk try dupe(Sema.Expr, allocator, .{
                     .call = .{
