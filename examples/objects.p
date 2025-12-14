@@ -1,5 +1,3 @@
-// Basic object examples
-
 object Point {
     fn init(x, y) {
         this.x = x;

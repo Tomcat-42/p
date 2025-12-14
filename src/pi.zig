@@ -39,11 +39,6 @@ const Repl = struct {
     }
 
     pub fn eval(this: *const @This(), allocator: Allocator, code: []const u8) !?[]const u8 {
-        //NOTE: Only for debugging
-        var tokens: Tokenizer = .init(code);
-        while (tokens.next()) |tok|
-            log.debug("\n{f}", .{tok.format(0)});
-
         var parser: Parser = .init(.init(code));
         defer parser.deinit(allocator);
 
